@@ -15,21 +15,23 @@ library(tidyverse)
 Define a function of MCMC to update parameters.
 ```{r define functions}
 # Likelihood function
-likelihood<-function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, simdata){
+likelihood<-function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata){
   
   beta0_t = logit(rho0_t)   #calculate beta0 for likelihood
-  
   beta1_t = (logit(theta_t)-logit(rho0_t))/gamma_t  #calculate beta1 for likelihood
-  
   beta0_e = logit(rho0_e)   #calculate beta0 for likelihood
-  
   beta1_e = (logit(theta_e)-logit(rho0_e))/gamma_e  #calculate beta1 for likelihood
   
-  s<-simdata$S    #nets of recent patients
+  s = simdata$S    #nets of recent patients
   
-  prob <-exp(beta0+beta1*simdata$X)/(1+exp(beta0+beta1*simdata$X))
+  # Calculate the predicted S values
+  S_x = exp(beta0_t + beta1_t * simdata$X)/(1+exp(beta0_t + beta1_t * simdata$X))
   
-  likelihood<-prod((prob^s)*(1-prob)^(1-s))   #quasi likelihood of all recent patients
+  # Calculate the Probability of efficacy given dose = x
+  Y_x = exp(beta0_e + beta1_e * simdata$X)/(1+exp(beta0_e + beta1_e * simdata$X))
+  
+  # Calculate the joint likelihood
+  likelihood = prod((prob^s)*(1-prob)^(1-s))   #quasi likelihood of all recent patients
   
   return(likelihood)
 }
