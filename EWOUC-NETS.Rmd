@@ -27,7 +27,7 @@ likelihood<-function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, simdata
   
   s<-simdata$S    #nets of recent patients
   
-  prob<-exp(beta0+beta1*simdata$X)/(1+exp(beta0+beta1*simdata$X))
+  prob <-exp(beta0+beta1*simdata$X)/(1+exp(beta0+beta1*simdata$X))
   
   likelihood<-prod((prob^s)*(1-prob)^(1-s))   #quasi likelihood of all recent patients
   
