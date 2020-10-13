@@ -22,16 +22,23 @@ likelihood<-function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, si
   beta0_e = logit(rho0_e)   #calculate beta0 for likelihood
   beta1_e = (logit(theta_e)-logit(rho0_e))/gamma_e  #calculate beta1 for likelihood
   
-  s = simdata$S    #nets of recent patients
+  s = simdata$S    # NETS of recent patients.
+  y = simdata$Y    # Efficacy of recent patients. y = 1 if efficacy event occurs.
   
-  # Calculate the predicted S values
-  S_x = exp(beta0_t + beta1_t * simdata$X)/(1+exp(beta0_t + beta1_t * simdata$X))
+  # Calculate the probability of toxicity given dose = x
+  pit = exp(beta0_t + beta1_t * simdata$X)/(1+exp(beta0_t + beta1_t * simdata$X))
   
-  # Calculate the Probability of efficacy given dose = x
-  Y_x = exp(beta0_e + beta1_e * simdata$X)/(1+exp(beta0_e + beta1_e * simdata$X))
+  # Calculate the probability of efficacy given dose = x
+  pie = exp(beta0_e + beta1_e * simdata$X)/(1+exp(beta0_e + beta1_e * simdata$X))
+  
+  # Define marginal probabilities
+  pi11 = pit*pie*(1+((exp(phi)-1)/(exp(phi)+1))*(1-pit)*(1-pie))
+  pi10 = pie - pi11
+  pi01 = pit - pi11
+  pi00 = 1 - pi11 - pi10 - pi01
   
   # Calculate the joint likelihood
-  likelihood = prod((prob^s)*(1-prob)^(1-s))   #quasi likelihood of all recent patients
+  likelihood = prod((pi11^(s*))*(1-prob)^(1-s))   #quasi likelihood of all recent patients
   
   return(likelihood)
 }
