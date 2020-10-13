@@ -143,27 +143,50 @@ gammae_up<-function(rho0_t, rho0_e, gamma_t, pregammae, theta_t, theta_e, phi, s
 }
 
 
-posterior<-function(orirho0,origamma,theta,simdata,int){
-  # create variables to store updated rho0 and gamma values.
-  rho0_s<-c(orirho0,rep(NA,int-1))
-  gamma_s<-c(origamma,rep(NA,int-1))
+posterior<-function(orirho0t, orirho0e, origammat, origammae, thetat, thetae, oriphi, simdata,int){
+  # create variables to store updated parameters values.
+  rho0t_s = c(orirho0t,rep(NA,int-1))
+  rho0e_s = c(orirho0e,rep(NA,int-1))
+  gammat_s = c(origammat,rep(NA,int-1))
+  gammae_s = c(origammae,rep(NA,int-1))
+  phi_s = c(oriphi,rep(NA,int-1))
   
-  #First update rho0 based on input data and assume gamma is known 
+  #First update phi based on input data and assume other pamameters are all known 
   for(i1 in 2:int){
-    rho0_s[i1]<-rho0_up(rho0_s[i1-1],origamma,theta,simdata=simdata)
+    phi_s[i1] = phi_up(orirho0t, orirho0e, origammat, origammae, theta_t, theta_e, phi_s[i1-1], simdata)
   }
   
-  #Second update gamma based on input data and 
-  #assume rho0 (bayesian estimator) known
-  b <- median(rho0_s[25000:30000])
+  phi_pos = median(phi_s[25000:30000])
+  
+  #Second update rho0t based on input data and assume other pamameters are all known 
   for(i2 in 2:int){
-    gamma_s[i2]<-gamma_up(b,gamma_s[i2-1],theta,simdata=simdata)
+    rho0t_s[i2] = rho0t_up(rho0t_s[i2-1],orirho0e, origammat, origammae, thetat, thetae, phi_pos, simdata=simdata)
   }
+  rho0t_pos = median(rho0t_s[25000:30000])
   
-  posterior<-list(rho0_s,gamma_s)
+  #Third update rho0e based on input data and assume other pamameters are all known
+  for(i3 in 2:int){
+    rho0e_s[i3] = rho0e_up(rho0t_pos,rho0e_s[i3-1], origammat, origammae, thetat, thetae, phi_pos, simdata=simdata)
+  }
+  rho0e_pos = median(rho0e_s[25000:30000])
+  
+  #Fourth update gammat based on input data and assume other pamameters are all known
+  for(i4 in 2:int){
+    gammat_s[i4] = gammat_up(rho0t_pos,rho0e_pos, gammat_s[i4-1], origammae, thetat, thetae, phi_pos, simdata=simdata)
+  }
+  gammat_pos = median(gammat_s[25000:30000])
+  
+  #Fifth update gammae based on input data and assume other pamameters are all known
+  for(i5 in 2:int){
+    gammae_s[i4] = gammae_up(rho0t_pos,rho0e_pos, gammat_pos, gammae_s[i5-1], thetat, thetae, phi_pos, simdata=simdata)
+  }
+  gammae_pos = median(gammae_s[25000:30000])
+  
+  posterior<-list(phi_s, rho0t_s, rho0e_s, gammat_s, gammae_s)
   return(posterior)
   
 }
 
 ```
 
+Then try to do simulations.
