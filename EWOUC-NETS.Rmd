@@ -37,8 +37,8 @@ likelihood<-function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, si
   pi01 = pit - pi11
   pi00 = 1 - pi11 - pi10 - pi01
   
-  # Calculate the joint likelihood
-  likelihood = prod((pi11^(s*))*(1-prob)^(1-s))   #quasi likelihood of all recent patients
+  # Calculate the joint quasi likelihood of all recent patients
+  likelihood = prod((pi11^(s*y))*(pi01^(y*(1-s)))*(pi10^((1-y)*s))*(pi00^((1-y)*(1-s))))  
   
   return(likelihood)
 }
