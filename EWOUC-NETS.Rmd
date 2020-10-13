@@ -43,7 +43,26 @@ likelihood<-function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, si
   return(likelihood)
 }
 
-
+### Update phi ###
+phi_up = function(prephi, rho0_e, rho0_t, theta_e, theta_t, gamma_e, gamma_t, simdata) {
+  # the range of phi is negative infinity to infinity, so we need transformation of phi
+  z = rnorm(1, 0, 1)
+  phi_new = log(z/(1-z)) # range from -inf to inf with equally distributed probability
+  
+  lik_phi_new = likelihood(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi_new, simdata)
+  lik_phi_old = likelihood(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, prephi, simdata)
+  
+  ratio_phi = lik_phi_new/lik_phi_old
+  if(ratio_phi=="NaN"){ratio_phi = 1}
+  
+  if(ratio_phi>=1){phi_next = phi_new}
+  else{test<-runif(1)
+  if(test<ratio_phi){phi_next = phi_new}
+  else{phi_next<-prephi}
+  
+  }
+  return(phi_next)
+}
 ### Update rho0 ###
 rho0_up<-function(prerho0,posgamma,theta,simdata){
   rho0_new<-runif(1,0,theta) #randomly select new value for rho0
