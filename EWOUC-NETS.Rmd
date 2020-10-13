@@ -85,7 +85,7 @@ rho0t_up<-function(prerho0t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, si
 }
 
 ### Update rho0e ###
-rho0t_up<-function(rho0_t, prerho0e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata){
+rho0e_up<-function(rho0_t, prerho0e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata){
   delta = 0.001 # Small positive number
   rho0e_new<-runif(1,0,theta_t+delta) #randomly select new value for rho0e
   
@@ -106,8 +106,8 @@ rho0t_up<-function(rho0_t, prerho0e, gamma_t, gamma_e, theta_t, theta_e, phi, si
 }
 
 
-# Update gamma #
-gamma_up<-function(posrho0,pregamma,theta,simdata){
+# Update gammat #
+gammat_up<-function(posrho0,pregamma,theta,simdata){
   gamma_new<-runif(1,0,1)
   
   lik_gamma_new<-likelihood(posrho0,gamma_new,theta,simdata=simdata)
