@@ -107,21 +107,39 @@ rho0e_up<-function(rho0_t, prerho0e, gamma_t, gamma_e, theta_t, theta_e, phi, si
 
 
 # Update gammat #
-gammat_up<-function(posrho0,pregamma,theta,simdata){
-  gamma_new<-runif(1,0,1)
+gammat_up<-function(rho0_t, rho0_e, pregammat, gamma_e, theta_t, theta_e, phi, simdata){
+  gammat_new<-runif(1,0,1)
   
-  lik_gamma_new<-likelihood(posrho0,gamma_new,theta,simdata=simdata)
-  lik_gamma_old<-likelihood(posrho0,pregamma,theta,simdata=simdata)
-  ratio_gamma<-lik_gamma_new/lik_gamma_old
+  lik_gammat_new<-likelihood(rho0_t, rho0_e, gammat_new, gamma_e, theta_t, theta_e, phi, simdata=simdata)
+  lik_gammat_old<-likelihood(rho0_t, rho0_e, pregammat, gamma_e, theta_t, theta_e, phi, simdata=simdata)
+  ratio_gammat<-lik_gammat_new/lik_gammat_old
   
-  if(ratio_gamma=="NaN"){ratio_gamma<-1}
-  if(ratio_gamma>=1){gamma_next<-gamma_new}
+  if(ratio_gammat=="NaN"){ratio_gammat<-1}
+  if(ratio_gammat>=1){gammat_next<-gammat_new}
   else{
     test<-runif(1)
-    if(test<ratio_gamma){gamma_next<-gamma_new}
-    else{gamma_next<-pregamma}
+    if(test<ratio_gammat){gammat_next<-gammat_new}
+    else{gammat_next<-pregammat}
   }
-  return(gamma_next)
+  return(gammat_next)
+}
+
+# Update gammae #
+gammae_up<-function(rho0_t, rho0_e, gamma_t, pregammae, theta_t, theta_e, phi, simdata){
+  gammae_new<-runif(1,0,1)
+  
+  lik_gammae_new<-likelihood(rho0_t, rho0_e, gamma_t, gammae_new, theta_t, theta_e, phi, simdata=simdata)
+  lik_gammae_old<-likelihood(rho0_t, rho0_e, gamma_t, pregammae, theta_t, theta_e, phi, simdata=simdata)
+  ratio_gammae<-lik_gammae_new/lik_gammae_old
+  
+  if(ratio_gammae=="NaN"){ratio_gammae<-1}
+  if(ratio_gammae>=1){gammae_next<-gammae_new}
+  else{
+    test<-runif(1)
+    if(test<ratio_gammae){gammae_next<-gammae_new}
+    else{gammae_next<-pregammae}
+  }
+  return(gammae_next)
 }
 
 
