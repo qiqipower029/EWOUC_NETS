@@ -201,16 +201,48 @@ iteration<-30000      # MCMC procedure iteration
 begin<-25000          # burn-in 
 end<-30000
 
-N <- 40          # Total sample size
-fb <- 0.25       # feasibiity bound
-theta<-0.476     # Target NETS  Pr(DLT)=0.33
+N = 40          # Total sample size
+fb.t = 0.25       # feasibiity bound for toxicity
+fb.e = 0.75 
+thetat = 0.33     
+thetae = 0.3
 
 #### Simulation Scenario Set-up ####
-rho0 <- 0.05    # initial rho0
-gamma <- 0.6
-beta0<-logit(rho0)  #calculate beta0 for likelihood
-beta1<-(logit(theta)-logit(rho0))/gamma  #calculate beta1 for likelihood
+rho0t = 0.05    # initial rho0
+gammat = 0.6
+beta0t = logit(rho0t)  #calculate beta0 for likelihood
+beta1t = (logit(thetat)-logit(rho0t))/gammat  #calculate beta1 for likelihood
 
-simdata <- list(S=0.05,X=10^-6,rho0 = 0.05,gamma=0.6,beta0=beta0,beta1=beta1)
+rho0e = 0.05
+gammae = 0.6
+beta0e = logit(rho0e)  #calculate beta0 for likelihood
+beta1e = (logit(thetae)-logit(rho0e))/gammae  #calculate beta1 for likelihood
+
+simdata <- list(S=0.05,Y=0.05, X=10^-6,rho0t = 0.05, gammat=0.6, rho0e = 0.05, gammae = 0.6, beta0t=beta0t,beta1t=beta1t, beta0e = beta0e)
+
+for (i in 1:sim){
+  
+  if( (i!=1)&(fb<0.45) ){
+    fb <- fb+0.05
+  }
+   
+  out <- posterior(simdata$rho0t[i],simdata$rho0e[i], simdata$gammat[i], simdata$gammae[i], thetat, thetae, simdata, iteration)
+  
+  estrho0 <- out[[1]][begin:end]
+  estgamma <- out[[2]][begin:end]
+  estbeta0 <- logit(estrho0)
+  estbeta1 <- (logit(theta)-logit(estrho0))/estgamma
+  
+  simdata$rho0[i+1] <- median(estrho0)
+  simdata$gamma[i+1] <- median(estgamma)
+  simdata$beta0[i+1] <- median(estbeta0)
+  simdata$beta1[i+1] <- median(estbeta1)
+  simdata$X[i+1] <- quantile(estgamma,fb)
+   
+  x1<- beta0+beta1*simdata$X[i+1] 
+  ANETS <- inv.logit(x1)
+  simdata$S[i+1] <- rtruncnorm(1,a=0,b=1,mean=ANETS,sd=sqrt(ANETS*(1-ANETS)/N))
+  
+}
 ```
 
