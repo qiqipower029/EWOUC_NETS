@@ -190,3 +190,27 @@ posterior<-function(orirho0t, orirho0e, origammat, origammae, thetat, thetae, or
 ```
 
 Then try to do simulations.
+```{r simulation}
+library(boot)
+library(truncnorm)
+library(coda)
+library(lattice)
+
+sim<-100              # simulation iteration
+iteration<-30000      # MCMC procedure iteration 
+begin<-25000          # burn-in 
+end<-30000
+
+N <- 40          # Total sample size
+fb <- 0.25       # feasibiity bound
+theta<-0.476     # Target NETS  Pr(DLT)=0.33
+
+#### Simulation Scenario Set-up ####
+rho0 <- 0.05    # initial rho0
+gamma <- 0.6
+beta0<-logit(rho0)  #calculate beta0 for likelihood
+beta1<-(logit(theta)-logit(rho0))/gamma  #calculate beta1 for likelihood
+
+simdata <- list(S=0.05,X=10^-6,rho0 = 0.05,gamma=0.6,beta0=beta0,beta1=beta1)
+```
+

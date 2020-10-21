@@ -49,4 +49,4 @@ for (i in 1:sim){
   
 }
 proc.time()-s
-
+simdata
