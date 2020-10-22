@@ -22,8 +22,8 @@ beta0<-logit(rho0)  #calculate beta0 for likelihood
 beta1<-(logit(theta)-logit(rho0))/gamma  #calculate beta1 for likelihood
 
 simdata <- list(S=0.05,X=10^-6,rho0 = 0.05,gamma=0.6,beta0=beta0,beta1=beta1)
+w = 3 # Penalty term to calculate utility
 
-s <- proc.time()
 for (i in 1:sim){
   
   if( (i!=1)&(fb<0.45) ){
@@ -41,7 +41,7 @@ for (i in 1:sim){
   simdata$gamma[i+1] <- median(estgamma)
   simdata$beta0[i+1] <- median(estbeta0)
   simdata$beta1[i+1] <- median(estbeta1)
-  simdata$X[i+1] <- quantile(estgamma,fb)
+  simdata$X[i+1] <- quantile(estgammat,fb)
    
   x1<- beta0+beta1*simdata$X[i+1] 
   ANETS <- inv.logit(x1)

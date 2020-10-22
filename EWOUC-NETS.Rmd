@@ -218,25 +218,41 @@ gammae = 0.6
 beta0e = logit(rho0e)  #calculate beta0 for likelihood
 beta1e = (logit(thetae)-logit(rho0e))/gammae  #calculate beta1 for likelihood
 
-simdata <- list(S=0.05,Y=0.05, X=10^-6,rho0t = 0.05, gammat=0.6, rho0e = 0.05, gammae = 0.6, beta0t=beta0t,beta1t=beta1t, beta0e = beta0e)
+phi = 0.3 # Initial value for phi
+
+w = 3 # Penalty term in utility function
+
+simdata <- list(S=0.05,Y=0.05, X=10^-6,rho0t = 0.05, gammat=0.6, rho0e = 0.05, gammae = 0.6, beta0t=beta0t,beta1t=beta1t, beta0e = beta0e, phi = phi)
 
 for (i in 1:sim){
   
-  if( (i!=1)&(fb<0.45) ){
-    fb <- fb+0.05
+  if( (i!=1)&(fb.t<0.45&fb.e>0.55) ){
+    fb.t = fb.t + 0.05
+    fb.e = fb.e - 0.05
   }
    
-  out <- posterior(simdata$rho0t[i],simdata$rho0e[i], simdata$gammat[i], simdata$gammae[i], thetat, thetae, simdata, iteration)
+  out <- posterior(simdata$rho0t[i],simdata$rho0e[i], simdata$gammat[i], simdata$gammae[i], thetat, thetae, phi, simdata, iteration)
   
-  estrho0 <- out[[1]][begin:end]
-  estgamma <- out[[2]][begin:end]
-  estbeta0 <- logit(estrho0)
-  estbeta1 <- (logit(theta)-logit(estrho0))/estgamma
+  estphi = out[[1]][begin:end]
+  estrho0t <- out[[2]][begin:end]
+  estrho0e <- out[[3]][begin:end]
+  estgammat <- out[[4]][begin:end]
+  estgammae <- out[[5]][begin:end]
+  estbeta0t <- logit(estrho0t)
+  estbeta1t <- (logit(theta)-logit(estrho0))/estgamma
+  estbeta0e <- logit(estrho0t)
+  estbeta1e <- (logit(theta)-logit(estrho0))/estgamma
   
-  simdata$rho0[i+1] <- median(estrho0)
-  simdata$gamma[i+1] <- median(estgamma)
-  simdata$beta0[i+1] <- median(estbeta0)
-  simdata$beta1[i+1] <- median(estbeta1)
+  simdata$phi[i+1] = median(estphi)
+  simdata$rho0t[i+1] <- median(estrho0t)
+  simdata$rho0e[i+1] <- median(estrho0e)
+  simdata$gammat[i+1] <- median(estgammat)
+  simdata$gammae[i+1] <- median(estgammae)
+  simdata$beta0t[i+1] <- median(estbeta0t)
+  simdata$beta1t[i+1] <- median(estbeta1t)
+  simdata$beta0e[i+1] <- median(estbeta0e)
+  simdata$beta1e[i+1] <- median(estbeta1e)
+  
   simdata$X[i+1] <- quantile(estgamma,fb)
    
   x1<- beta0+beta1*simdata$X[i+1] 
