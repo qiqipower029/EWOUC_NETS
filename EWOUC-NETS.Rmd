@@ -87,7 +87,7 @@ rho0t_up<-function(prerho0t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, si
 ### Update rho0e ###
 rho0e_up<-function(rho0_t, prerho0e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata){
   delta = 0.001 # Small positive number
-  rho0e_new<-runif(1,0,theta_t+delta) #randomly select new value for rho0e
+  rho0e_new<-runif(1,0,theta_e+delta) #randomly select new value for rho0e
   
   lik_rhoe_new<-likelihood(rho0_t, rho0e_new, gamma_t, gamma_e, theta_t, theta_e, phi, simdata=simdata)
   lik_rhoe_old<-likelihood(rho0_t, prerho0e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata=simdata)
@@ -220,15 +220,15 @@ gammae = 0.6
 beta0e = logit(rho0e)  #calculate beta0 for likelihood
 beta1e = (logit(thetae)-logit(rho0e))/gammae  #calculate beta1 for likelihood
 
-phi = 0.3 # Initial value for phi
+phi = 0 # Initial value for phi
 
 w = 2 # Penalty term in utility function
 
-simdata <- list(S=0.9,Y=0, X=0.2,rho0t = 0.05, gammat=0.6, rho0e = 0.05, gammae = 0.2, beta0t=beta0t,beta1t=beta1t, beta0e = beta0e, phi = phi)
+simdata <- list(S=0.9,Y=0, X=0.2,rho0t = 0.05, gammat=0.7, rho0e = 0.05, gammae = 0.2, beta0t=beta0t,beta1t=beta1t, beta0e = beta0e, phi = phi)
 Xmin = 0.2
 Xmax = 1
 
-set.seed(1029)
+set.seed(42)
 for (i in 1:sim){
   
   if( (i!=1)&(fb.t<0.45) ){
@@ -301,9 +301,11 @@ for (i in 1:sim){
   
   simdata$X[i] = nextdose
   pe = 1/(1+exp(-(simdata$beta0e[i] + simdata$beta1e[i]*simdata$X[i])))
-  x1<- simdata$beta0t[i]+simdata$beta1t[i]*simdata$X[i] 
+  x1<- simdata$beta0t[i]+simdata$beta1t[i]*simdata$X[i]
   ANETS <- inv.logit(x1)
-  simdata$S[i] <- rtruncnorm(1,a=0,b=1,mean=ANETS,sd=sqrt(ANETS*(1-ANETS)/N))
+  S = rtruncnorm(1,a=0,b=1,mean=ANETS,sd=sqrt(ANETS*(1-ANETS)/N))
+  if(S == "NaN") S = 1
+  simdata$S[i] = S
   simdata$Y[i] = rbernoulli(1, p = pe) %>% as.numeric()
 }
   
