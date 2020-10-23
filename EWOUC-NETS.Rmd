@@ -46,14 +46,14 @@ likelihood<-function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, si
 ### Update phi ###
 phi_up = function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, prephi, simdata) {
   # the range of phi is negative infinity to infinity, so we need transformation of phi
-  z = rnorm(1, 0, 1)
-  phi_new = log(z/(1-z)) # range from -inf to inf with equally distributed probability
+  z = runif(1, 0, 1)
+  phi_new = log(z) - log(1-z) # range from -inf to inf with equally distributed probability
   
   lik_phi_new = likelihood(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi_new, simdata)
   lik_phi_old = likelihood(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, prephi, simdata)
   
   ratio_phi = lik_phi_new/lik_phi_old
-  if(ratio_phi=="NaN"){ratio_phi = 1}
+  if(is.na(ratio_phi)){ratio_phi = 1}
   
   if(ratio_phi>=1){phi_next = phi_new}
   else{test<-runif(1)
@@ -73,7 +73,7 @@ rho0t_up<-function(prerho0t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, si
   
   ratio_rhot<-lik_rhot_new/lik_rhot_old
   
-  if(ratio_rhot=="NaN"){ratio_rhot<-1}
+  if(is.na(ratio_rhot)){ratio_rhot<-1}
   
   if(ratio_rhot>=1){rhot_next<-rho0t_new}
   else{test<-runif(1)
@@ -94,7 +94,7 @@ rho0e_up<-function(rho0_t, prerho0e, gamma_t, gamma_e, theta_t, theta_e, phi, si
   
   ratio_rhoe<-lik_rhoe_new/lik_rhoe_old
   
-  if(ratio_rhoe=="NaN"){ratio_rhoe<-1}
+  if(is.na(ratio_rhoe)){ratio_rhoe<-1}
   
   if(ratio_rhoe>=1){rhoe_next<-rho0e_new}
   else{test<-runif(1)
@@ -114,8 +114,8 @@ gammat_up<-function(rho0_t, rho0_e, pregammat, gamma_e, theta_t, theta_e, phi, s
   lik_gammat_old<-likelihood(rho0_t, rho0_e, pregammat, gamma_e, theta_t, theta_e, phi, simdata=simdata)
   ratio_gammat<-lik_gammat_new/lik_gammat_old
   
-  if(ratio_gammat=="NaN"){ratio_gammat<-1}
-  if(ratio_gammat>=1){gammat_next<-gammat_new}
+  if(is.na(ratio_gammat)){ratio_gammat<-1}
+  if(ratio_gammat >= 1){gammat_next<-gammat_new}
   else{
     test<-runif(1)
     if(test<ratio_gammat){gammat_next<-gammat_new}
@@ -132,7 +132,7 @@ gammae_up<-function(rho0_t, rho0_e, gamma_t, pregammae, theta_t, theta_e, phi, s
   lik_gammae_old<-likelihood(rho0_t, rho0_e, gamma_t, pregammae, theta_t, theta_e, phi, simdata=simdata)
   ratio_gammae<-lik_gammae_new/lik_gammae_old
   
-  if(ratio_gammae=="NaN"){ratio_gammae<-1}
+  if(is.na(ratio_gammae)){ratio_gammae<-1}
   if(ratio_gammae>=1){gammae_next<-gammae_new}
   else{
     test<-runif(1)
@@ -153,7 +153,7 @@ posterior<-function(orirho0t, orirho0e, origammat, origammae, thetat, thetae, or
   
   #First update phi based on input data and assume other pamameters are all known 
   for(i1 in 2:int){
-    phi_s[i1] = phi_up(orirho0t, orirho0e, origammat, origammae, theta_t, theta_e, phi_s[i1-1], simdata)
+    phi_s[i1] = phi_up(orirho0t, orirho0e, origammat, origammae, thetat, thetae, phi_s[i1-1], simdata)
   }
   
   phi_pos = median(phi_s[25000:30000])
@@ -178,7 +178,7 @@ posterior<-function(orirho0t, orirho0e, origammat, origammae, thetat, thetae, or
   
   #Fifth update gammae based on input data and assume other pamameters are all known
   for(i5 in 2:int){
-    gammae_s[i4] = gammae_up(rho0t_pos,rho0e_pos, gammat_pos, gammae_s[i5-1], thetat, thetae, phi_pos, simdata=simdata)
+    gammae_s[i5] = gammae_up(rho0t_pos,rho0e_pos, gammat_pos, gammae_s[i5-1], thetat, thetae, phi_pos, simdata=simdata)
   }
   gammae_pos = median(gammae_s[25000:30000])
   
@@ -195,6 +195,8 @@ library(boot)
 library(truncnorm)
 library(coda)
 library(lattice)
+
+std.dose<-seq(0.2,1,0.8/4); std.dose
 
 sim<-100              # simulation iteration
 iteration<-30000      # MCMC procedure iteration 
@@ -220,13 +222,16 @@ beta1e = (logit(thetae)-logit(rho0e))/gammae  #calculate beta1 for likelihood
 
 phi = 0.3 # Initial value for phi
 
-w = 3 # Penalty term in utility function
+w = 2 # Penalty term in utility function
 
-simdata <- list(S=0.05,Y=0.05, X=10^-6,rho0t = 0.05, gammat=0.6, rho0e = 0.05, gammae = 0.6, beta0t=beta0t,beta1t=beta1t, beta0e = beta0e, phi = phi)
+simdata <- list(S=0.9,Y=0, X=0.2,rho0t = 0.05, gammat=0.6, rho0e = 0.05, gammae = 0.2, beta0t=beta0t,beta1t=beta1t, beta0e = beta0e, phi = phi)
+Xmin = 0.2
+Xmax = 1
 
+set.seed(1029)
 for (i in 1:sim){
   
-  if( (i!=1)&(fb.t<0.45&fb.e>0.55) ){
+  if( (i!=1)&(fb.t<0.45) ){
     fb.t = fb.t + 0.05
     fb.e = fb.e - 0.05
   }
@@ -239,26 +244,68 @@ for (i in 1:sim){
   estgammat <- out[[4]][begin:end]
   estgammae <- out[[5]][begin:end]
   estbeta0t <- logit(estrho0t)
-  estbeta1t <- (logit(theta)-logit(estrho0))/estgamma
-  estbeta0e <- logit(estrho0t)
-  estbeta1e <- (logit(theta)-logit(estrho0))/estgamma
+  estbeta1t <- (logit(thetat)-logit(estrho0t))/estgammat
+  estbeta0e <- logit(estrho0e)
+  estbeta1e <- (logit(thetae)-logit(estrho0e))/estgammae
   
-  simdata$phi[i+1] = median(estphi)
-  simdata$rho0t[i+1] <- median(estrho0t)
-  simdata$rho0e[i+1] <- median(estrho0e)
-  simdata$gammat[i+1] <- median(estgammat)
-  simdata$gammae[i+1] <- median(estgammae)
-  simdata$beta0t[i+1] <- median(estbeta0t)
-  simdata$beta1t[i+1] <- median(estbeta1t)
-  simdata$beta0e[i+1] <- median(estbeta0e)
-  simdata$beta1e[i+1] <- median(estbeta1e)
+  simdata$phi[i] = mean(estphi)
+  simdata$rho0t[i] <- mean(estrho0t)
+  simdata$rho0e[i] <- mean(estrho0e)
+  simdata$gammat[i] <- mean(estgammat)
+  simdata$gammae[i] <- mean(estgammae)
+  simdata$beta0t[i] <- mean(estbeta0t)
+  simdata$beta1t[i] <- mean(estbeta1t)
+  simdata$beta0e[i] <- mean(estbeta0e)
+  simdata$beta1e[i] <- mean(estbeta1e)
   
-  simdata$X[i+1] <- quantile(estgamma,fb)
-   
-  x1<- beta0+beta1*simdata$X[i+1] 
+  MTD = quantile(estgammat,1-fb.t)
+  MED = quantile(estgammae,fb.e, na.rm = T)
+  
+  if(MTD>1) MTD = 1
+  if(MED>1) MED = 1
+  adj.MTD = std.dose[max(which(MTD-std.dose>=0))]
+  adj.MED = std.dose[min(which(std.dose-MED>=0))]
+  range_accepted = MTD - MED
+  if(length(which(std.dose-MED>0)) == 0) adj.MED = max(std.dose)
+  
+
+  sim.ad<-NULL #####accept dose level set initialized###
+  z<-NULL
+  est.pt = numeric(length(std.dose))
+  est.pe = numeric(length(std.dose))
+  
+  for (j in 1:length(std.dose)) {
+  ##########predict posterior efficacy and toxicity############
+
+  est.pt[j] = 1/(1+exp(-(simdata$beta0t[i] + simdata$beta1t[i]*std.dose[j])))
+  est.pe[j] = 1/(1+exp(-(simdata$beta0e[i] + simdata$beta1e[i]*std.dose[j])))
+
+  
+  if(std.dose[j]>=adj.MED&std.dose[j]<=adj.MTD) {        
+    sim.ad<-c(std.dose[j],sim.ad)
+    z<-c((est.pe[j]-w*est.pt[j]),z)
+    }
+  }
+
+  if (length(sim.ad)==0){
+      sim.ad = adj.MTD ###if no dose in accepted dose set, treat patient at mtd####
+      z=1  
+      }
+    ####if p(mtd>med)>75%, stop the trial####
+  
+  
+  if(length(sim.ad)!=0) {
+    idx = which(std.dose==sim.ad[which.max(z)])
+    nextdose = std.dose[idx] ######choose the best utility dose level######
+  }
+  
+  simdata$X[i] = nextdose
+  pe = 1/(1+exp(-(simdata$beta0e[i] + simdata$beta1e[i]*simdata$X[i])))
+  x1<- simdata$beta0t[i]+simdata$beta1t[i]*simdata$X[i] 
   ANETS <- inv.logit(x1)
-  simdata$S[i+1] <- rtruncnorm(1,a=0,b=1,mean=ANETS,sd=sqrt(ANETS*(1-ANETS)/N))
-  
+  simdata$S[i] <- rtruncnorm(1,a=0,b=1,mean=ANETS,sd=sqrt(ANETS*(1-ANETS)/N))
+  simdata$Y[i] = rbernoulli(1, p = pe) %>% as.numeric()
 }
+  
 ```
 
