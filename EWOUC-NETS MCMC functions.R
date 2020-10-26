@@ -1,0 +1,172 @@
+# Likelihood function
+likelihood<-function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata){
+  
+  beta0_t = logit(rho0_t)   #calculate beta0 for likelihood
+  beta1_t = (logit(theta_t)-logit(rho0_t))/gamma_t  #calculate beta1 for likelihood
+  beta0_e = logit(rho0_e)   #calculate beta0 for likelihood
+  beta1_e = (logit(theta_e)-logit(rho0_e))/gamma_e  #calculate beta1 for likelihood
+  
+  s = simdata$S    # NETS of recent patients.
+  y = simdata$Y    # Efficacy of recent patients. y = 1 if efficacy event occurs.
+  
+  # Calculate the probability of toxicity given dose = x
+  pit = exp(beta0_t + beta1_t * simdata$X)/(1+exp(beta0_t + beta1_t * simdata$X))
+  
+  # Calculate the probability of efficacy given dose = x
+  pie = exp(beta0_e + beta1_e * simdata$X)/(1+exp(beta0_e + beta1_e * simdata$X))
+  
+  # Define marginal probabilities
+  pi11 = pit*pie*(1+((exp(phi)-1)/(exp(phi)+1))*(1-pit)*(1-pie))
+  pi10 = pie - pi11
+  pi01 = pit - pi11
+  pi00 = 1 - pi11 - pi10 - pi01
+  
+  # Calculate the joint quasi likelihood of all recent patients
+  likelihood = prod((pi11^(s*y))*(pi01^(y*(1-s)))*(pi10^((1-y)*s))*(pi00^((1-y)*(1-s))))  
+  
+  return(likelihood)
+}
+
+### Update phi ###
+phi_up = function(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, prephi, simdata) {
+  # the range of phi is negative infinity to infinity, so we need transformation of phi
+  z = runif(1, 0, 1)
+  phi_new = log(z) - log(1-z) # range from -inf to inf with equally distributed probability
+  
+  lik_phi_new = likelihood(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi_new, simdata)
+  lik_phi_old = likelihood(rho0_t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, prephi, simdata)
+  
+  ratio_phi = lik_phi_new/lik_phi_old
+  if(is.na(ratio_phi)){ratio_phi = 1}
+  
+  if(ratio_phi>=1){phi_next = phi_new}
+  else{test<-runif(1)
+  if(test<ratio_phi){phi_next = phi_new}
+  else{phi_next<-prephi}
+  
+  }
+  return(phi_next)
+}
+
+### Update rho0t ###
+rho0t_up<-function(prerho0t, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata){
+  rho0t_new<-runif(1,0,theta_t) #randomly select new value for rho0t
+  
+  lik_rhot_new<-likelihood(rho0t_new, rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata=simdata)
+  lik_rhot_old<-likelihood(prerho0t,rho0_e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata=simdata)
+  
+  ratio_rhot<-lik_rhot_new/lik_rhot_old
+  
+  if(is.na(ratio_rhot)){ratio_rhot<-1}
+  
+  if(ratio_rhot>=1){rhot_next<-rho0t_new}
+  else{test<-runif(1)
+  if(test<ratio_rhot){rhot_next<-rho0t_new}
+  else{rhot_next<-prerho0t}
+  
+  }
+  return(rhot_next)
+}
+
+### Update rho0e ###
+rho0e_up<-function(rho0_t, prerho0e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata){
+  delta = 0.001 # Small positive number
+  rho0e_new<-runif(1,0,theta_e+delta) #randomly select new value for rho0e
+  
+  lik_rhoe_new<-likelihood(rho0_t, rho0e_new, gamma_t, gamma_e, theta_t, theta_e, phi, simdata=simdata)
+  lik_rhoe_old<-likelihood(rho0_t, prerho0e, gamma_t, gamma_e, theta_t, theta_e, phi, simdata=simdata)
+  
+  ratio_rhoe<-lik_rhoe_new/lik_rhoe_old
+  
+  if(is.na(ratio_rhoe)){ratio_rhoe<-1}
+  
+  if(ratio_rhoe>=1){rhoe_next<-rho0e_new}
+  else{test<-runif(1)
+  if(test<ratio_rhoe){rhoe_next<-rho0e_new}
+  else{rhoe_next<-prerho0e}
+  
+  }
+  return(rhoe_next)
+}
+
+
+# Update gammat #
+gammat_up<-function(rho0_t, rho0_e, pregammat, gamma_e, theta_t, theta_e, phi, simdata){
+  gammat_new<-runif(1,0,1)
+  
+  lik_gammat_new<-likelihood(rho0_t, rho0_e, gammat_new, gamma_e, theta_t, theta_e, phi, simdata=simdata)
+  lik_gammat_old<-likelihood(rho0_t, rho0_e, pregammat, gamma_e, theta_t, theta_e, phi, simdata=simdata)
+  ratio_gammat<-lik_gammat_new/lik_gammat_old
+  
+  if(is.na(ratio_gammat)){ratio_gammat<-1}
+  if(ratio_gammat >= 1){gammat_next<-gammat_new}
+  else{
+    test<-runif(1)
+    if(test<ratio_gammat){gammat_next<-gammat_new}
+    else{gammat_next<-pregammat}
+  }
+  return(gammat_next)
+}
+
+# Update gammae #
+gammae_up<-function(rho0_t, rho0_e, gamma_t, pregammae, theta_t, theta_e, phi, simdata){
+  gammae_new<-runif(1,0,1)
+  
+  lik_gammae_new<-likelihood(rho0_t, rho0_e, gamma_t, gammae_new, theta_t, theta_e, phi, simdata=simdata)
+  lik_gammae_old<-likelihood(rho0_t, rho0_e, gamma_t, pregammae, theta_t, theta_e, phi, simdata=simdata)
+  ratio_gammae<-lik_gammae_new/lik_gammae_old
+  
+  if(is.na(ratio_gammae)){ratio_gammae<-1}
+  if(ratio_gammae>=1){gammae_next<-gammae_new}
+  else{
+    test<-runif(1)
+    if(test<ratio_gammae){gammae_next<-gammae_new}
+    else{gammae_next<-pregammae}
+  }
+  return(gammae_next)
+}
+
+
+posterior<-function(orirho0t, orirho0e, origammat, origammae, thetat, thetae, oriphi, simdata,int){
+  # create variables to store updated parameters values.
+  rho0t_s = c(orirho0t,rep(NA,int-1))
+  rho0e_s = c(orirho0e,rep(NA,int-1))
+  gammat_s = c(origammat,rep(NA,int-1))
+  gammae_s = c(origammae,rep(NA,int-1))
+  phi_s = c(oriphi,rep(NA,int-1))
+  
+  #First update phi based on input data and assume other pamameters are all known 
+  for(i1 in 2:int){
+    phi_s[i1] = phi_up(orirho0t, orirho0e, origammat, origammae, thetat, thetae, phi_s[i1-1], simdata)
+  }
+  
+  phi_pos = median(phi_s[25000:30000])
+  
+  #Second update rho0t based on input data and assume other pamameters are all known 
+  for(i2 in 2:int){
+    rho0t_s[i2] = rho0t_up(rho0t_s[i2-1],orirho0e, origammat, origammae, thetat, thetae, phi_pos, simdata=simdata)
+  }
+  rho0t_pos = median(rho0t_s[25000:30000])
+  
+  #Third update rho0e based on input data and assume other pamameters are all known
+  for(i3 in 2:int){
+    rho0e_s[i3] = rho0e_up(rho0t_pos,rho0e_s[i3-1], origammat, origammae, thetat, thetae, phi_pos, simdata=simdata)
+  }
+  rho0e_pos = median(rho0e_s[25000:30000])
+  
+  #Fourth update gammat based on input data and assume other pamameters are all known
+  for(i4 in 2:int){
+    gammat_s[i4] = gammat_up(rho0t_pos,rho0e_pos, gammat_s[i4-1], origammae, thetat, thetae, phi_pos, simdata=simdata)
+  }
+  gammat_pos = median(gammat_s[25000:30000])
+  
+  #Fifth update gammae based on input data and assume other pamameters are all known
+  for(i5 in 2:int){
+    gammae_s[i5] = gammae_up(rho0t_pos,rho0e_pos, gammat_pos, gammae_s[i5-1], thetat, thetae, phi_pos, simdata=simdata)
+  }
+  gammae_pos = median(gammae_s[25000:30000])
+  
+  posterior<-list(phi_s, rho0t_s, rho0e_s, gammat_s, gammae_s)
+  return(posterior)
+  
+}
