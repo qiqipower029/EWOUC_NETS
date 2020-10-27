@@ -1,9 +1,35 @@
 #######EWOUC-Comp######
 
+require(rjags)  #####package to generate MCMC######
+require(msm)    #####
+
 logit<-function(p){return(log(p/(1-p)))} ####logit function####
 std.dose<-seq(0.2,1,0.8/4)  ######dose level for simulation####
 doselevel<-seq(0.2,1,0.8/4)
+####jags model specification####
+model="model
+{
+for (i in 1:N)
+{
+# Logistic regression model for extensification
+tox[i]~ dbern(P1[i])
+eff[i]~ dbern(P2[i])
+logit(P1[i])<-(1/(gammat - Xmin))*(gammat*logit(rhot)- Xmin*logit(thetat)+(logit(thetat)-logit(rhot))*X[i])
+logit(P2[i])<-(1/(gammae - Xmin))*(gammae*logit(rhoe)- Xmin*logit(thetae)+(logit(thetae)-logit(rhoe))*X[i])
+P11[i] <- P1[i]*P2[i]*(1+(1-P1[i])*(1-P2[i])*(exp(phi)-1)/(1+exp(phi)))
+P10[i] <- P1[i]-P11[i]
+P01[i] <- P2[i]-P11[i]
+P00[i] <- 1-(P10[i]+P01[i]+P11[i])
+ANETS[i] <- P1[i]
+S[i] ~ dnorm(P1[i], 1/((ANETS[i]*(1-ANETS[i]))/3))T(0, 1)
+}
 
+phi~dnorm(0,1)
+rhot~dunif(0,0.476)
+rhoe~dunif(0,0.5)
+gammat~dunif(Xmin,1.2)
+gammae~dunif(Xmin,1.2)
+}"
   #######################
   emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,a.T,thetae,ph,design,arrival){
     
@@ -11,7 +37,7 @@ doselevel<-seq(0.2,1,0.8/4)
     ##### sencario setting######
     scenario=sname     ##scenario name###
     cohort=3           ##cohort size###
-    thetat<-0.333      ###target tolerated level###
+    thetat<-0.476      ###TNETS###
     upe<-rep(0,sim)    ####Utility###
     res<-c(0,0,0)     ####initial result####    
     ######model####
@@ -56,7 +82,7 @@ doselevel<-seq(0.2,1,0.8/4)
       tox.int=NULL   ####initial value for toxicity#####
       eff.int=NULL   ####initial value for efficacy#####
       
-      newdata=list(eff=c(0,0,0),tox=c(0,0,0),X=c(0.2,0.2,0.2),Xmin=0.2,thetat=0.333,thetae=thetae,N=3)
+      newdata=list(eff=c(0,0,0),S=c(0,0,0),X=c(0.2,0.2,0.2),Xmin=0.2,thetat=0.476,thetae=thetae,N=3)
       
       ############list to store MCMC posterior samples######
       h.gammat<-list()
@@ -223,7 +249,6 @@ doselevel<-seq(0.2,1,0.8/4)
   ewouc.s3<-emuOU(doselevel,std.dose[5],std.dose[3],12,1000,3,2,"Moderate",3,0.3,0,"EWOUC-comp",7)
   ewouc.s4<-emuOU(doselevel,std.dose[2],std.dose[4],12,1000,3,3,"Bad",3,0.3,0,"EWOUC-comp",7)
   ewouc.s5<-emuOU(doselevel,std.dose[2],std.dose[5],12,1000,3,3,"Extremely Bad",3,0.3,0,"EWOUC-comp",7)
-  
-  
-  
+
+
   
