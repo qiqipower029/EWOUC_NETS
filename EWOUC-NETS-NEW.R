@@ -181,6 +181,10 @@ gammae~dunif(Xmin,1.2)
           idx<-which(std.dose==sim.ad[which.max(z)])
           dose.tried[idx]=1
           nextdose<-std.dose[idx] ######choose the best utility dose level######
+          # Calculate the next S using the recommended dose
+          est.lpt2 = (1/(h.gammat[[i]]- Xmin))*(h.gammat[[i]]*log(h.rhot[[i]]/(1-h.rhot[[i]]))- Xmin*log(thetat/(1-thetat))+(log(thetat/(1-thetat))-log(h.rhot[[i]]/(1-h.rhot[[i]])))*nextdose)
+          est.pt2 = 1/(1+exp(-est.lpt2))
+          pstm.pt2 = mean(est.pt2)
           for (m in 1:3){
             #####responses for next cohort#######
             res[m]<-sample(c(1,2,3,4),size=1,replace=T,prob=c(p11[idx],p10[idx],p01[idx],p00[idx]))
