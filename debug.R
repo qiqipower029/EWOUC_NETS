@@ -4,6 +4,8 @@ require(rjags)  #####package to generate MCMC######
 require(msm)    #####
 library(truncnorm) ##### for truncated normal distribution
 library(boot)
+library(openxlsx)
+library(tidyverse)
 
 logit<-function(p){return(log(p/(1-p)))} ####logit function####
 std.dose<-seq(0.2,1,0.8/4)  ######dose level for simulation####
@@ -41,7 +43,8 @@ gammae~dunif(Xmin,1.2)
     cohort=3           ##cohort size###
     thetat<-0.476      ###TNETS###
     upe<-rep(0,sim)    ####Utility###
-    res<-c(0,0,0)     ####initial result####    
+    res<-c(0,0,0)     ####initial result####  
+
     ######model####
     Xmin=0.2;Xmax=1;rhot=0.03;rhoe=0.08  #####initial value
     b0t=1/(gammat-Xmin)*(gammat*logit(rhot)-Xmin*logit(thetat))
@@ -222,14 +225,13 @@ gammae~dunif(Xmin,1.2)
       upe[k]<-sum(est.pe[[idx]]>thetae)/length(est.pe[[idx]])
     }
     ####manipulate data to write down final result####
-    s.table<-all.table[all.table$patientId != c(37,38,39),]
+    s.table<-all.table[all.table$patientId != c(37,38,39),] # simulation data created
     dr.table<-table(final,useNA="always")/sim
-    df.table<-table(s.table[,3])/nrow(s.table)
-    t.table<-table(s.table[,2])/nrow(s.table)
-    e.table<-table(s.table[,1])/nrow(s.table)  
+    df.table<-table(s.table[,3])/nrow(s.table) # probability of recommended doses
+    e.table<-table(s.table[,1])/nrow(s.table)  # proportion for eff = 0 and 1
     n.table<-all.table[all.table$size <=36,]
     aver.samplesize<-nrow(s.table)/sim
-    u.table<-matrix(c(d.u,std.dose),ncol=2)
+    u.table<-matrix(c(d.u,std.dose),ncol=2) # utility at each dose level
     colnames(u.table)<-c("utility","d")
     ut<-merge(s.table,u.table,by.x="X",by.y="d")
     eut<-sum(ut$utility)/nrow(ut)
@@ -242,21 +244,22 @@ gammae~dunif(Xmin,1.2)
     expt<-mean(time)
     m1<-merge(cm,c1,by.x="std.dose",by.y="dose",all.x=T)
     m2<-merge(m1,c2,by.x="std.dose",by.y="dose",all.x=T)
-    m3<-cbind(m2,c3[c3$t==1,2],c4[c4$e==1,2],eut,expt,sname,design, aver.samplesize)
+    m3<-cbind(m2,c4[c4$e==1,2],eut,expt,sname,design, aver.samplesize)
     m3[,5:6]=m3[,5:6]*100
     colnames(m3)[7:8]=c("DLT","Efficacy")
     write.table(m3,"EWOUC2.csv",na="0",dec=".",qmethod="double",sep=",",col.names=F,row.names=T,quote=T,append="T")
-    return(list(m3))
+    write.xlsx(m3, "EWOUCnew.xlsx")
+    return(m3)
   }
   
   
   
   ###
-  ewouc.s1<-emuOU(doselevel,std.dose[5],std.dose[2],12,1000,3,3,"Extremely Good",3,0.3,0,"EWOUC-comp",0.25)
+  ewouc.s1<-emuOU(doselevel,std.dose[5],std.dose[2],12,1000,3,3,"Extremely Good",3,0.3,0,"EWOUCNETS-comp",0.25)
   ewouc.s2<-emuOU(doselevel,std.dose[4],std.dose[2],12,1000,3,3,"Good",3,0.3,0,"EWOUC-comp",7)
   ewouc.s3<-emuOU(doselevel,std.dose[5],std.dose[3],12,1000,3,2,"Moderate",3,0.3,0,"EWOUC-comp",7)
   ewouc.s4<-emuOU(doselevel,std.dose[2],std.dose[4],12,1000,3,3,"Bad",3,0.3,0,"EWOUC-comp",7)
   ewouc.s5<-emuOU(doselevel,std.dose[2],std.dose[5],12,1000,3,3,"Extremely Bad",3,0.3,0,"EWOUC-comp",7)
-
-
+  
+  
   
