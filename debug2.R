@@ -34,16 +34,26 @@ rhoe~dunif(0,0.5)
 gammat~dunif(Xmin,1.2)
 gammae~dunif(Xmin,1.2)
 }"
+
+  ewouc.s1<-emuOU(doselevel,std.dose[5],std.dose[2],12,1000,3,3,"Extremely Good",3,0.3,0,"EWOUCNETS-comp",0.25)
   #######################
   emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,a.T,thetae,ph,design,arrival){
     
-    phi=ph ######correlation between toxicity and efficacy######  
+    phi=0 ######correlation between toxicity and efficacy######  
     ##### sencario setting######
-    scenario=sname     ##scenario name###
+    scenario="Extremely Good"   ##scenario name###
+    N=12
+    sim = 1000
+    w=3
     cohort=3           ##cohort size###
+    gammat = std.dose[5]
+    gammae = std.dose[2]
+    thetae = 0.3
+    a.T = 3
     thetat<-0.476      ###TNETS###
     upe<-rep(0,sim)    ####Utility###
-    res<-c(0,0,0)     ####initial result####  
+    res<-c(0,0,0)     ####initial result#### 
+    arrival = 0.25
     
     ######model####
     Xmin=0.2;Xmax=1;rhot=0.03;rhoe=0.08  #####initial value
