@@ -16,7 +16,6 @@ model="model
 for (i in 1:N)
 {
 # Logistic regression model for extensification
-tox[i]~ dbern(P1[i])
 eff[i]~ dbern(P2[i])
 logit(P1[i])<-(1/(gammat - Xmin))*(gammat*logit(rhot)- Xmin*logit(thetat)+(logit(thetat)-logit(rhot))*X[i])
 logit(P2[i])<-(1/(gammae - Xmin))*(gammae*logit(rhoe)- Xmin*logit(thetae)+(logit(thetae)-logit(rhoe))*X[i])
@@ -69,11 +68,7 @@ gammae~dunif(Xmin,1.2)
     d.table<-NULL
     sim.pe<-s1.pe
     sim.pt<-s1.pt
-    #####################joint probability for toxicity and efficacy###################
-    p11<-sim.pe*sim.pt*(1+(1-sim.pe)*(1-sim.pt)*(exp(phi)-1)/(1+exp(phi)))
-    p10<-sim.pt-p11
-    p01<-sim.pe-p11
-    p00<-1-p11-p10-p01
+
     ####################################
     
     all.table<-NULL  ####storing all data####
@@ -91,6 +86,7 @@ gammae~dunif(Xmin,1.2)
     
     ##############simulation begin##############
     for (k in 1:sim){
+      k = 2
       fa=0.25   #####initial feasibility bound#####
       fb=0.25   
       init=list(rhot=rhot,rhoe=rhoe,gammae=gammae,gammat=gammat, phi=0,.RNG.name="base::Wichmann-Hill",.RNG.seed=r[k])
@@ -202,13 +198,12 @@ gammae~dunif(Xmin,1.2)
           pstm.pt2 = mean(est.pt2)
           ANETS <- inv.logit(pstm.pt2)
           S.new = rtruncnorm(3,a=0,b=1,mean=ANETS,sd=sqrt(ANETS*(1-ANETS)/N))
+          sim.pe0 = 1 - sim.pe
           for (m in 1:3){
             #####responses for next cohort#######
-            res[m]<-sample(c(1,2,3,4),size=1,replace=T,prob=c(p11[idx],p10[idx],p01[idx],p00[idx]))
+            res[m]<-sample(c(1,2),size=1,replace=F,prob=c(sim.pe[idx], sim.pe0[idx]))
             if (res[m]==1) {S=S.new[[m]];eff=1}
-            else if (res[m]==2) {S=S.new[[m]];eff=0}
-            else if (res[m]==3) {S=S.new[[m]];eff=1}
-            else if (res[m]==4) {S=S.new[[m]];eff=0}
+            else if (res[m]==0) {S=S.new[[m]];eff=0}
             ###################################
             
             recuittime<-rexp(1,arrival)
