@@ -14,10 +14,7 @@ tox[i] ~ dbern(P1[i])
 eff[i]~ dbern(P2[i])
 logit(P1[i])<-(1/(gammat - Xmin))*(gammat*logit(rhot)- Xmin*logit(thetat)+(logit(thetat)-logit(rhot))*X[i])
 logit(P2[i])<-(1/(gammae - Xmin))*(gammae*logit(rhoe)- Xmin*logit(thetae)+(logit(thetae)-logit(rhoe))*X[i])
-P11[i] <- P1[i]*P2[i]*(1+(1-P1[i])*(1-P2[i])*(exp(phi)-1)/(1+exp(phi)))
-P10[i] <- P1[i]-P11[i]
-P01[i] <- P2[i]-P11[i]
-P00[i] <- 1-(P10[i]+P01[i]+P11[i])
+mu[i] = 1 - 1/(1+(X[i]/beta1)^beta2
 }
 
 phi~dnorm(0,1)
@@ -27,10 +24,10 @@ gammat~dunif(Xmin,1.2)
 gammae~dunif(Xmin,1.2)
 }"
   #######################
-  emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,a.T,thetae,ph,design,arrival){
+  emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,thetae,ph,design,arrival){
     
     phi=ph ######correlation between toxicity and efficacy######  
-    ##### sencario setting######
+    ##### scenario setting######
     scenario=sname     ##scenario name###
     cohort=3           ##cohort size###
     thetat<-0.333      ###target tolerated level###
