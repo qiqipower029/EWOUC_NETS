@@ -65,7 +65,7 @@ gammae~dunif(Xmin,1.2)
     s.table<-NULL
     
     sim=1000 ########1000 replicates#######
-    set.seed(1234)
+    set.seed(1029)
     r=round(runif(sim)*1000)#######seed#######
     a.T<-3 ####assessment period###
     K<-3 
