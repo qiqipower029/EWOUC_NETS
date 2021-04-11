@@ -244,7 +244,7 @@ gammae~dunif(Xmin,1.2)
     m3<-cbind(m2,c3,c4,eut,sname,design,avgsample)
     m3[,5:6]=m3[,5:6]*100
 
-    write.xlsx(m3,"EWOUC-NW-s2.xlsx")
+    write.xlsx(m3,"EWOUC-NW-s4(2).xlsx")
     return(m3)
   }
   
