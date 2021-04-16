@@ -1,6 +1,6 @@
 ######EWOC late on efficacy######
 require(rjags) ####package for posterior distribution########
-require(mcm)
+require(truncnorm)
 library(openxlsx)
 ####jags model specification####
 model="model
@@ -88,8 +88,10 @@ gammae~dunif(Xmin,1.2)
       h.tau<-list()
       est.lpe<-list()
       est.lpt<-list()
-      est.pe<-list() 
-      est.pt<-list()
+      est.pe = list()
+      est.pt = list()
+      est.mu<-list()
+      est.xi<-list()
       sim.int<-list()
       pstm.pt<-rep(0,length(std.dose))
       pstm.pe<-rep(0,length(std.dose))
@@ -106,12 +108,12 @@ gammae~dunif(Xmin,1.2)
       for(i in 1:N) {
         ########## Update posterior sample by MCMC#######
         foo<-jags.model(textConnection(model),data=newdata1,inits=init,quiet=T)
-        out <- coda.samples(model=foo,variable.names=c("gammat","gammae","rhot","rhoe","phi","lambda"), n.iter=2000)
+        out <- coda.samples(model=foo,variable.names=c("gammat","gammae","rhot","rhoe","tau","lambda"), n.iter=2000)
         h.gammat[[i]]<-out[[1]][,"gammat"][1001:2000]
         h.gammae[[i]]<-out[[1]][,"gammae"][1001:2000]
         h.rhot[[i]]<-out[[1]][,"rhot"][1001:2000]
         h.rhoe[[i]]<-out[[1]][,"rhoe"][1001:2000]
-        h.phi[[i]]<-out[[1]][,"phi"][1001:2000]
+        h.tau[[i]]<-out[[1]][,"tau"][1001:2000]
         if(fa<=0.45&ef.im==1) {fa=fa+0.05}
         if(fb<=0.45&improve==1)  {fb=fb+0.05}
         mtd<-quantile(h.gammat[[i]],prob=c(fb)) ###inference for MTD###
@@ -127,8 +129,10 @@ gammae~dunif(Xmin,1.2)
         for (j in 1:length(std.dose)) {
           est.lpe[[j]]<-(1/(h.gammae[[i]]- Xmin))*(h.gammae[[i]]*log(h.rhoe[[i]]/(1-h.rhoe[[i]]))- Xmin*log(thetae/(1-thetae))+(log(thetae/(1-thetae))-log(h.rhoe[[i]]/(1-h.rhoe[[i]])))*std.dose[j])
           est.lpt[[j]]<-(1/(h.gammat[[i]]- Xmin))*(h.gammat[[i]]*log(h.rhot[[i]]/(1-h.rhot[[i]]))- Xmin*log(thetat/(1-thetat))+(log(thetat/(1-thetat))-log(h.rhot[[i]]/(1-h.rhot[[i]])))*std.dose[j])
-          est.pt[[j]]<-1/(1+exp(-est.lpt[[j]]))
-          est.pe[[j]]<-1/(1+exp(-est.lpe[[j]]))
+          est.xi[[j]]<-mean(1/(1+exp(-est.lpt[[j]])))
+          est.mu[[j]]<-mean(1/(1+exp(-est.lpe[[j]])))
+          est.pt[[j]]<-est.xi[[j]]
+          est.pe[[j]]<-est.mu[[j]]
           pstm.pt[j]<-mean(est.pt[[j]])
           pstm.pe[j]<-mean(est.pe[[j]])
           if(std.dose[j]>=adj.med&std.dose[j]<=adj.mtd){
@@ -174,12 +178,11 @@ gammae~dunif(Xmin,1.2)
           
           #####generate new data based on true distribution####
           for (m in 1:3){
-            res[m]<-sample(c(1,2,3,4),size=1,replace=T,prob=c(p11[idx],p10[idx],p01[idx],p00[idx]))
-            if (res[m]==1) {tox=1;eff=1;M=1;}
-            else if (res[m]==2) {tox=1;eff=0;M=1;}
-            else if (res[m]==3) {tox=0;eff=1;M=1;}
-            else if (res[m]==4) {tox=0;eff=0;M=1;}
-            newdata$tox=c(newdata$tox,tox)
+            set.seed(m+k+10*i+55*j)
+            S = rtruncnorm(n = 1, mean = xi[idx], sd = sqrt(xi[idx]*(1-xi[idx])/N), a = 0, b = 1)
+            eff = rtruncnorm(n = 1, mean = mu[idx] + tau*(S-xi[idx]), sd = sqrt(sqrt(std.dose[idx])), a = 0, b = 1) 
+            M = 1
+            newdata$S=c(newdata$S,S)
             newdata$eff=c(newdata$eff,eff)
             newdata$X=c(newdata$X,nextdose)
             newdata$N=newdata$N+1 
@@ -206,8 +209,8 @@ gammae~dunif(Xmin,1.2)
     s.table<-all.table[all.table$patientId != c(37,38,39),]
     dr.table<-table(final,useNA="always")/sim
     df.table<-table(s.table[,4])/nrow(s.table)
-    t.table<-table(s.table[,3])/nrow(s.table)
-    e.table<-table(s.table[,1])/nrow(s.table)
+    t.table<-nrow(subset(s.table, S >= thetat))/nrow(s.table)
+    e.table<-nrow(subset(s.table, eff >= thetae))/nrow(s.table)
     p.table<-rep(0,length(std.dose))
     p.table[which(std.dose==as.numeric(names(df.table)[which.max(df.table)]))]=19
     u.table<-matrix(c(d.u,std.dose),ncol=2)
@@ -219,14 +222,14 @@ gammae~dunif(Xmin,1.2)
     cm<-data.frame(r.rt)
     c1<-data.frame(df.table);colnames(c1)<-c("dose","Tp")
     c2<-data.frame(dr.table);colnames(c2)<-c("dose","Rp")
-    c3<-data.frame(t.table);colnames(c3)<-c("t","Dp")
-    c4<-data.frame(e.table);colnames(c4)<-c("e","Ep")
+    c3<-data.frame(t.table);colnames(c3)<-c("DLT")
+    c4<-data.frame(e.table);colnames(c4)<-c("Efficacy")
     m1<-merge(cm,c1,by.x="std.dose",by.y="dose",all.x=T)
     m2<-merge(m1,c2,by.x="std.dose",by.y="dose",all.x=T)
-    m3<-cbind(m2,c3[c3$t==1,2],c4[c4$e==1,2],eut,sname,design,avgsample)
+    m3<-cbind(m2,c3,c4,eut,sname,design,avgsample)
     m3[,5:6]=m3[,5:6]*100
     colnames(m3)[7:8]=c("DLT","Efficacy")
-    write.xlsx(m3,"EWOUC2-DA-S1.xlsx")
+    write.xlsx(m3,"EWOUC-NETS-DA-S2.xlsx")
     ##################
     return(m3)
   }
