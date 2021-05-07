@@ -1,4 +1,4 @@
-######EWOC late on efficacy######
+######EWOUC-NETS late on efficacy######
 require(rjags) ####package for posterior distribution########
 require(truncnorm)
 library(openxlsx)
@@ -129,12 +129,12 @@ gammae~dunif(Xmin,1.2)
         for (j in 1:length(std.dose)) {
           est.lpe[[j]]<-(1/(h.gammae[[i]]- Xmin))*(h.gammae[[i]]*log(h.rhoe[[i]]/(1-h.rhoe[[i]]))- Xmin*log(thetae/(1-thetae))+(log(thetae/(1-thetae))-log(h.rhoe[[i]]/(1-h.rhoe[[i]])))*std.dose[j])
           est.lpt[[j]]<-(1/(h.gammat[[i]]- Xmin))*(h.gammat[[i]]*log(h.rhot[[i]]/(1-h.rhot[[i]]))- Xmin*log(thetat/(1-thetat))+(log(thetat/(1-thetat))-log(h.rhot[[i]]/(1-h.rhot[[i]])))*std.dose[j])
-          est.xi[[j]]<-mean(1/(1+exp(-est.lpt[[j]])))
-          est.mu[[j]]<-mean(1/(1+exp(-est.lpe[[j]])))
+          est.xi[[j]]<-median(1/(1+exp(-est.lpt[[j]])))
+          est.mu[[j]]<-median(1/(1+exp(-est.lpe[[j]])))
           est.pt[[j]]<-est.xi[[j]]
           est.pe[[j]]<-est.mu[[j]]
-          pstm.pt[j]<-mean(est.pt[[j]])
-          pstm.pe[j]<-mean(est.pe[[j]])
+          pstm.pt[j]<-median(est.pt[[j]])
+          pstm.pe[j]<-median(est.pe[[j]])
           if(std.dose[j]>=adj.med&std.dose[j]<=adj.mtd){
             sim.ad<-c(std.dose[j],sim.ad)
             z<-c(mean(est.pe[[j]]-w*est.pt[[j]]),z) ###predictive utility####

@@ -1,4 +1,4 @@
-#######EWOUC-Comp######
+#######EWOUC-NETS-Comp######
 
 require(rjags)  #####package to generate MCMC######
 require(msm)    #####
@@ -34,8 +34,8 @@ gammae~dunif(Xmin,1.2)
     scenario=sname     ##scenario name###
     cohort=3           ##cohort size###
     thetat<-0.476      ###target tolerated level###
-    upe<-rep(0,sim)    ####Utility###
-    res<-c(0,0,0)     ####initial result####    
+    upe<-rep(NA,sim)    ####Utility###
+    res<-c(NA,NA,NA)     ####initial result####    
     ######model####
     Xmin=0.2;Xmax=1;rhot=0.03;rhoe=0.08  #####initial value
     b0t=1/(gammat-Xmin)*(gammat*logit(rhot)-Xmin*logit(thetat))
@@ -44,7 +44,7 @@ gammae~dunif(Xmin,1.2)
     b1e=1/(gammae-Xmin)*(logit(thetae)-logit(rhoe))
     xi = exp(b0t + b1t*std.dose)/(1+exp(b0t + b1t*std.dose))
     mu = exp(b0e + b1e*std.dose)/(1+exp(b0e + b1e*std.dose))
-    lambda = 2
+    lambda = 1
     sig2 = std.dose^lambda
     
     s1.pe = mu
@@ -66,7 +66,7 @@ gammae~dunif(Xmin,1.2)
     error=0            
     pstm.du=rep(0,sim)  ####posterior utility###
     
-    set.seed(1234)
+    set.seed(1029)
     r=round(runif(sim)*1000)
     final<-rep(0,sim)  ####final dose recommendation initial value####
     ##############################################
@@ -145,12 +145,12 @@ gammae~dunif(Xmin,1.2)
           ##########predict posterior efficacy and toxicity############
           est.lpe[[j]]<-(1/(h.gammae[[i]]- Xmin))*(h.gammae[[i]]*log(h.rhoe[[i]]/(1-h.rhoe[[i]]))- Xmin*log(thetae/(1-thetae))+(log(thetae/(1-thetae))-log(h.rhoe[[i]]/(1-h.rhoe[[i]])))*std.dose[j])
           est.lpt[[j]]<-(1/(h.gammat[[i]]- Xmin))*(h.gammat[[i]]*log(h.rhot[[i]]/(1-h.rhot[[i]]))- Xmin*log(thetat/(1-thetat))+(log(thetat/(1-thetat))-log(h.rhot[[i]]/(1-h.rhot[[i]])))*std.dose[j])
-          est.xi[[j]]<-mean(1/(1+exp(-est.lpt[[j]])))
-          est.mu[[j]]<-mean(1/(1+exp(-est.lpe[[j]])))
+          est.xi[[j]]<-median(1/(1+exp(-est.lpt[[j]])))
+          est.mu[[j]]<-median(1/(1+exp(-est.lpe[[j]])))
           est.pt[[j]]<-est.xi[[j]]
           est.pe[[j]]<-est.mu[[j]]
-          pstm.pt[j]<-mean(est.pt[[j]])
-          pstm.pe[j]<-mean(est.pe[[j]])
+          pstm.pt[j]<-median(est.pt[[j]])
+          pstm.pe[j]<-median(est.pe[[j]])
           ###############################################################
           
           ##############choose the dose into accepted dose set#######
@@ -188,7 +188,7 @@ gammae~dunif(Xmin,1.2)
             #####responses for next cohort#######
             set.seed(m+k+10*i+55*j)
             S = rtnorm(n = 1, mean = xi[idx], sd = sqrt(xi[idx]*(1-xi[idx])/N), lower = 0, upper = 1)
-            eff = rtnorm(n = 1, mean = mu[idx] + tau*(S-xi[idx]), sd = sqrt(sqrt(std.dose[idx])), lower = 0, upper = 1) 
+            eff = rtnorm(n = 1, mean = mu[idx] + tau*(S-xi[idx]), sd = sqrt(sqrt(std.dose[idx]^lambda)), lower = 0, upper = 1) 
         
             ###################################
             
@@ -238,7 +238,7 @@ gammae~dunif(Xmin,1.2)
     m2<-merge(m1,c2,by.x="std.dose",by.y="dose",all.x=T)
     m3<-cbind(m2,c3, c4, eut,expt,sname, design, aver.samplesize)
     m3[,5:6]=m3[,5:6]*100
-    write.xlsx(m3,"EWOUC-comp-s1.xlsx")
+    write.xlsx(m3,"EWOUC-comp-s2-revised.xlsx")
     return(list(m3))
   }
   
@@ -246,7 +246,7 @@ gammae~dunif(Xmin,1.2)
   
   ###
   ewouc.s1<-emuOU(doselevel,std.dose[5],std.dose[2],12,1000,3,3,"Extremely Good",3,0.3,0,"EWOUC-comp",0.25)
-  ewouc.s2<-emuOU(doselevel,std.dose[4],std.dose[2],12,1000,3,3,"Good",3,0.3,0,"EWOUC-comp",7)
+  ewouc.s2<-emuOU(doselevel,std.dose[4],std.dose[2],12,5,3,3,"Good",3,0.3,0,"EWOUC-comp",7)
   ewouc.s3<-emuOU(doselevel,std.dose[5],std.dose[3],12,1000,3,2,"Moderate",3,0.3,0,"EWOUC-comp",7)
   ewouc.s4<-emuOU(doselevel,std.dose[2],std.dose[4],12,1000,3,3,"Bad",3,0.3,0,"EWOUC-comp",7)
   ewouc.s5<-emuOU(doselevel,std.dose[2],std.dose[5],12,1000,3,3,"Extremely Bad",3,0.3,0,"EWOUC-comp",7)
