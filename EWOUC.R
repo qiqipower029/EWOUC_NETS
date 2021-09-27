@@ -32,7 +32,7 @@ gammae~dunif(Xmin,1.2)
 emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,a.T,thetae,ph,design,arrival){
 
   phi=ph ######correlation between toxicity and efficacy######  
-  ##### sencario setting######
+  ##### scenario setting######
   scenario=sname     ##scenario name###
   cohort=3           ##cohort size###
   thetat<-0.333      ###target tolerated level###

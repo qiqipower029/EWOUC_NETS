@@ -20,7 +20,7 @@ pm[i]<-(1-eff[i]+eff[i]*exp(-lambda[1]*s[i,1]-lambda[2]*s[i,2]-lambda[3]*s[i,3])
 lambda[1]~dgamma(0.2,0.5)
 lambda[2]~dgamma(0.33,0.5)
 lambda[3]~dgamma(1,0.5)
-tau~dunif(-10,10)
+tau~dunif(-1,1)
 rhot~dunif(0,0.333)
 rhoe~dunif(0,0.5)
 gammat~dunif(Xmin,1.2)
@@ -42,14 +42,14 @@ gammae~dunif(Xmin,1.2)
     lambda=c(0.4,0.667,2)
     thetat<-0.476 ###
     thetae<-0.3
-    Xmin=0.2;Xmax=1;rhot=0.03;rhoe=0.08  #####initial value
+    Xmin=0.2;Xmax=1;rhot=0.01;rhoe=0.02  #####initial value
     b0t=1/(gammat-Xmin)*(gammat*logit(rhot)-Xmin*logit(thetat))
     b1t=1/(gammat-Xmin)*(logit(thetat)-logit(rhot))
     b0e=1/(gammae-Xmin)*(gammae*logit(rhoe)-Xmin*logit(thetae))
     b1e=1/(gammae-Xmin)*(logit(thetae)-logit(rhoe))
     xi = exp(b0t + b1t*std.dose)/(1+exp(b0t + b1t*std.dose))
     mu = exp(b0e + b1e*std.dose)/(1+exp(b0e + b1e*std.dose))
-    lambda = 2
+    lambda = 7
     sig2 = std.dose^lambda
     s1.pe = mu
     s1.pt = xi
@@ -73,7 +73,7 @@ gammae~dunif(Xmin,1.2)
     
     ###########simulation begin#############
     for (k in 1:sim){
-      init=list(rhot=rhot,rhoe=rhoe,gammae=gammat,gammat=gammae, tau=0.1, lambda=c(0.2,0.4,2),.RNG.name="base::Wichmann-Hill",.RNG.seed=r[k]) #####initial###
+      init=list(rhot=rhot,rhoe=rhoe,gammae=gammat,gammat=gammae, tau=0, lambda=c(0.2,0.4,2),.RNG.name="base::Wichmann-Hill",.RNG.seed=r[k]) #####initial###
       S.int=NULL
       eff.int=NULL
       ####first cohort response of the data####
@@ -129,12 +129,12 @@ gammae~dunif(Xmin,1.2)
         for (j in 1:length(std.dose)) {
           est.lpe[[j]]<-(1/(h.gammae[[i]]- Xmin))*(h.gammae[[i]]*log(h.rhoe[[i]]/(1-h.rhoe[[i]]))- Xmin*log(thetae/(1-thetae))+(log(thetae/(1-thetae))-log(h.rhoe[[i]]/(1-h.rhoe[[i]])))*std.dose[j])
           est.lpt[[j]]<-(1/(h.gammat[[i]]- Xmin))*(h.gammat[[i]]*log(h.rhot[[i]]/(1-h.rhot[[i]]))- Xmin*log(thetat/(1-thetat))+(log(thetat/(1-thetat))-log(h.rhot[[i]]/(1-h.rhot[[i]])))*std.dose[j])
-          est.xi[[j]]<-median(1/(1+exp(-est.lpt[[j]])))
-          est.mu[[j]]<-median(1/(1+exp(-est.lpe[[j]])))
+          est.xi[[j]]<-mean(1/(1+exp(-est.lpt[[j]])))
+          est.mu[[j]]<-mean(1/(1+exp(-est.lpe[[j]])))
           est.pt[[j]]<-est.xi[[j]]
           est.pe[[j]]<-est.mu[[j]]
-          pstm.pt[j]<-median(est.pt[[j]])
-          pstm.pe[j]<-median(est.pe[[j]])
+          pstm.pt[j]<-mean(est.pt[[j]])
+          pstm.pe[j]<-mean(est.pe[[j]])
           if(std.dose[j]>=adj.med&std.dose[j]<=adj.mtd){
             sim.ad<-c(std.dose[j],sim.ad)
             z<-c(mean(est.pe[[j]]-w*est.pt[[j]]),z) ###predictive utility####

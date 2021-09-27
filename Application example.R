@@ -1,8 +1,10 @@
-#######EWOUC-NETS-Comp######
+#-------------------------------------- Application using a real trial example --------------------------------------#
+#-------------------- Jieqi Tu --------------------#
+
 
 require(rjags)  #####package to generate MCMC######
 require(msm)    #####
-require(openxlsx)
+library(openxlsx)
 
 logit<-function(p){return(log(p/(1-p)))} ####logit function####
 std.dose<-seq(0.2,1,0.8/4)  ######dose level for simulation####
@@ -30,33 +32,33 @@ gammae~dunif(Xmin,1.2)
   emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,a.T,thetae,tau,design,arrival){
     
     tau=tau ######correlation between toxicity and efficacy######  
-    ##### scencario setting######
+    ##### sencario setting######
     scenario=sname     ##scenario name###
     cohort=3           ##cohort size###
     thetat<-0.476      ###target tolerated level###
     upe<-rep(NA,sim)    ####Utility###
     res<-c(NA,NA,NA)     ####initial result####    
     ######model####
-    Xmin=0.2;Xmax=1;rhot=0.01;rhoe=0.02  #####initial value
+    Xmin=0.2;Xmax=1;rhot=0.02;rhoe=0.03  #####initial value
     b0t=1/(gammat-Xmin)*(gammat*logit(rhot)-Xmin*logit(thetat))
     b1t=1/(gammat-Xmin)*(logit(thetat)-logit(rhot))
     b0e=1/(gammae-Xmin)*(gammae*logit(rhoe)-Xmin*logit(thetae))
     b1e=1/(gammae-Xmin)*(logit(thetae)-logit(rhoe))
     xi = exp(b0t + b1t*std.dose)/(1+exp(b0t + b1t*std.dose))
     mu = exp(b0e + b1e*std.dose)/(1+exp(b0e + b1e*std.dose))
-    lambda = 7
+    lambda = 1
     sig2 = std.dose^lambda
     
     s1.pe = mu
     s1.pt = xi
-    d.u<-s1.pe-w*s1.pt       ####true utility###
+    d.u<-s1.pe-s1.pt       ####true utility###
     real.table=rbind(s1.pt,s1.pe,d.u)  ####combine true  toxicity efficacy and utility###
     
     d.table<-NULL
     sim.pe<-s1.pe
     sim.pt<-s1.pt
- 
-
+    
+    
     
     all.table<-NULL  ####storing all data####
     s.table<-NULL    ####storing treated patient data####
@@ -156,7 +158,7 @@ gammae~dunif(Xmin,1.2)
           ##############choose the dose into accepted dose set#######
           if(std.dose[j]>=adj.med&std.dose[j]<=adj.mtd){        
             sim.ad<-c(std.dose[j],sim.ad)
-            z<-c(mean(est.pe[[j]]-w*est.pt[[j]]),z)  
+            z<-c(mean(est.pe[[j]]-est.pt[[j]]),z)  
           }
           #######################################################
         }
@@ -189,7 +191,7 @@ gammae~dunif(Xmin,1.2)
             set.seed(m^2+k+10*i+55*j)
             S = rtnorm(n = 1, mean = xi[idx], sd = sqrt(xi[idx]*(1-xi[idx])/N), lower = 0, upper = 1)
             eff = rtnorm(n = 1, mean = mu[idx] + tau*(S-xi[idx]), sd = sqrt(sqrt(std.dose[idx]^lambda)), lower = 0, upper = 1) 
-        
+            
             ###################################
             
             recuittime<-rexp(1,arrival)
@@ -212,11 +214,11 @@ gammae~dunif(Xmin,1.2)
       if (length(sim.ad)==0)  {
         final[k]=NA
       }
-      pstm.du[k]<-mean(est.pe[[idx]]-w*est.pt[[idx]])
+      pstm.du[k]<-median(est.pe[[idx]]-est.pt[[idx]]^2)
       upe[k]<-sum(est.pe[[idx]]>thetae)/length(est.pe[[idx]])
     }
     ####manipulate data to write down final result####
-    s.table<-all.table[all.table$patientId != c(37,38,39),]
+    s.table<-all.table[all.table$patientId != c(31, 32, 33, 34, 35, 36,37,38,39),]
     dr.table<-table(final,useNA="always")/sim #percentage of dose recommendation
     df.table<-table(s.table[,3])/nrow(s.table) #percentage of patients treated at each dose level
     n.table<-all.table[all.table$size <=36,]
@@ -238,22 +240,14 @@ gammae~dunif(Xmin,1.2)
     m2<-merge(m1,c2,by.x="std.dose",by.y="dose",all.x=T)
     m3<-cbind(m2,c3, c4, eut,expt,sname, design, aver.samplesize)
     m3[,5:6]=m3[,5:6]*100
-    write.xlsx(m3,"EWOUC-NETS-s5-newW2.xlsx")
+    write.xlsx(m3,"EWOUC-comp-application3.xlsx")
     return(list(m3))
   }
   
   
   
   ###
-  ewouc.s1<-emuOU(doselevel,std.dose[5],std.dose[2],12,1000,3,2,"Extremely Good",3,0.333,0,"EWOUC-comp",0.25)
-  ewouc.s2<-emuOU(doselevel,std.dose[4],std.dose[2],12,1000,3,2,"Good",3,0.333,0,"EWOUC-comp",7)
-  ewouc.s3<-emuOU(doselevel,std.dose[5],std.dose[3],12,1000,3,2,"Moderate",3,0.333,0,"EWOUC-comp",7)
-  ewouc.s4<-emuOU(doselevel,std.dose[2],std.dose[4],12,1000,3,2,"Bad",3,0.333,0,"EWOUC-comp",7)
-  ewouc.s5<-emuOU(doselevel,std.dose[2],std.dose[5],12,1000,3,2,"Extremely Bad",3,0.333,0,"EWOUC-comp",7)
-  
-  
-  
-  
-  
+  ewouc.application = emuOU(doselevel,std.dose[5],std.dose[2],10,1000,3,2,"Extremely Good",3,0.333,0,"EWOUC-comp",0.25)
+
   
   

@@ -2,9 +2,11 @@
 
 require(rjags)  #####package to generate MCMC######
 require(msm)    #####
+require(openxlsx)
 
 logit<-function(p){return(log(p/(1-p)))} ####logit function####
 std.dose<-seq(0.2,1,0.8/4)  ######dose level for simulation####
+doselevel = std.dose
 ####jags model specification####
 model="model
 {
@@ -234,7 +236,7 @@ emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,a.T,thetae,ph,desig
   m3<-cbind(m2,c3[c3$t==1,2],c4[c4$e==1,2],eut,expt,sname,design, aver.samplesize)
   m3[,5:6]=m3[,5:6]*100
   colnames(m3)[7:8]=c("DLT","Efficacy")
-  write.table(m3,"EWOUC2.csv",na="0",dec=".",qmethod="double",sep=",",col.names=F,row.names=T,quote=T,append="T")
+  write.xlsx(m3,"EWOUC-old-s3.xlsx")
   return(list(m3))
 }
 
@@ -243,7 +245,7 @@ emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,a.T,thetae,ph,desig
 ###
 ewouc.s1<-emuOU(doselevel,std.dose[5],std.dose[2],12,1000,3,3,"Extremely Good",3,0.3,0,"EWOUC-comp",0.25)
 ewouc.s2<-emuOU(doselevel,std.dose[4],std.dose[2],12,1000,3,3,"Good",3,0.3,0,"EWOUC-comp",7)
-ewouc.s3<-emuOU(doselevel,std.dose[5],std.dose[3],12,1000,3,2,"Moderate",3,0.3,0,"EWOUC-comp",7)
+ewouc.s3<-emuOU(doselevel,std.dose[5],std.dose[3],12,1000,3,3,"Moderate",3,0.3,0,"EWOUC-comp",7)
 ewouc.s4<-emuOU(doselevel,std.dose[2],std.dose[4],12,1000,3,3,"Bad",3,0.3,0,"EWOUC-comp",7)
 ewouc.s5<-emuOU(doselevel,std.dose[2],std.dose[5],12,1000,3,3,"Extremely Bad",3,0.3,0,"EWOUC-comp",7)
 

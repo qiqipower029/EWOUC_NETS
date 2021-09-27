@@ -1,4 +1,4 @@
-#######EWOUC-NETS-Comp######
+#######EWOUC-Comp######
 
 require(rjags)  #####package to generate MCMC######
 require(msm)    #####
@@ -13,50 +13,52 @@ model="model
 for (i in 1:N)
 {
 # Logistic regression model for extensification
-eff[i]~ dnorm(mu[i] + tau*(S[i]-xi[i]), 1/(sigma[i]))T(0,1)
-S[i] ~ dnorm(xi[i], 1/sqrt((xi[i]*(1-xi[i])/N)))T(0,1)
-logit(xi[i])<-(1/(gammat - Xmin))*(gammat*logit(rhot)- Xmin*logit(thetat)+(logit(thetat)-logit(rhot))*X[i])
-logit(mu[i])<-(1/(gammae - Xmin))*(gammae*logit(rhoe)- Xmin*logit(thetae)+(logit(thetae)-logit(rhoe))*X[i])
-sigma[i] = sqrt(X[i])
+tox[i] ~ dbern(P1[i])
+eff[i]~ dbern(P2[i])
+logit(P1[i])<-(1/(gammat - Xmin))*(gammat*logit(rhot)- Xmin*logit(thetat)+(logit(thetat)-logit(rhot))*X[i])
+logit(P2[i])<-(1/(gammae - Xmin))*(gammae*logit(rhoe)- Xmin*logit(thetae)+(logit(thetae)-logit(rhoe))*X[i])
+P11[i] <- P1[i]*P2[i]*(1+(1-P1[i])*(1-P2[i])*(exp(phi)-1)/(1+exp(phi)))
+P10[i] <- P1[i]-P11[i]
+P01[i] <- P2[i]-P11[i]
+P00[i] <- 1-(P10[i]+P01[i]+P11[i])
 }
 
-tau~dunif(-1,1)
+phi~dnorm(0,1)
 rhot~dunif(0,0.333)
 rhoe~dunif(0,0.5)
 gammat~dunif(Xmin,1.2)
 gammae~dunif(Xmin,1.2)
 }"
   #######################
-  emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,a.T,thetae,tau,design,arrival){
+  emuOU<-function(doselevel,gammat,gammae,N,sim,cohort,w,sname,a.T,thetae,ph,design,arrival){
     
-    tau=tau ######correlation between toxicity and efficacy######  
-    ##### scencario setting######
+    phi=ph ######correlation between toxicity and efficacy######  
+    ##### sencario setting######
     scenario=sname     ##scenario name###
     cohort=3           ##cohort size###
-    thetat<-0.476      ###target tolerated level###
-    upe<-rep(NA,sim)    ####Utility###
-    res<-c(NA,NA,NA)     ####initial result####    
+    thetat<-0.333      ###target tolerated level###
+    upe<-rep(0,sim)    ####Utility###
+    res<-c(0,0,0)     ####initial result####    
     ######model####
     Xmin=0.2;Xmax=1;rhot=0.01;rhoe=0.02  #####initial value
     b0t=1/(gammat-Xmin)*(gammat*logit(rhot)-Xmin*logit(thetat))
     b1t=1/(gammat-Xmin)*(logit(thetat)-logit(rhot))
     b0e=1/(gammae-Xmin)*(gammae*logit(rhoe)-Xmin*logit(thetae))
     b1e=1/(gammae-Xmin)*(logit(thetae)-logit(rhoe))
-    xi = exp(b0t + b1t*std.dose)/(1+exp(b0t + b1t*std.dose))
-    mu = exp(b0e + b1e*std.dose)/(1+exp(b0e + b1e*std.dose))
-    lambda = 7
-    sig2 = std.dose^lambda
-    
-    s1.pe = mu
-    s1.pt = xi
+    s1.pt<-1/(1+exp(-(b0t+b1t*std.dose)))  ####true toxicity based on the logistic model####
+    s1.pe<-1/(1+exp(-(b0e+b1e*std.dose)))  ####true efficacy based on the logistic model #####
     d.u<-s1.pe-w*s1.pt       ####true utility###
     real.table=rbind(s1.pt,s1.pe,d.u)  ####combine true  toxicity efficacy and utility###
     
     d.table<-NULL
     sim.pe<-s1.pe
     sim.pt<-s1.pt
- 
-
+    #####################joint probability for toxicity and efficacy###################
+    p11<-sim.pe*sim.pt*(1+(1-sim.pe)*(1-sim.pt)*(exp(phi)-1)/(1+exp(phi)))
+    p10<-sim.pt-p11
+    p01<-sim.pe-p11
+    p00<-1-p11-p10-p01
+    ####################################
     
     all.table<-NULL  ####storing all data####
     s.table<-NULL    ####storing treated patient data####
@@ -75,24 +77,22 @@ gammae~dunif(Xmin,1.2)
     for (k in 1:sim){
       fa=0.25   #####initial feasibility bound#####
       fb=0.25   
-      init=list(rhot=rhot,rhoe=rhoe,gammae=gammae,gammat=gammat, tau=0,.RNG.name="base::Wichmann-Hill",.RNG.seed=r[k])
-      S.int=NULL   ####initial value for toxicity#####
+      init=list(rhot=rhot,rhoe=rhoe,gammae=gammae,gammat=gammat, phi=0,.RNG.name="base::Wichmann-Hill",.RNG.seed=r[k])
+      tox.int=NULL   ####initial value for toxicity#####
       eff.int=NULL   ####initial value for efficacy#####
       
-      newdata=list(eff=c(0,0,0),S=c(0,0,0),X=c(0.2,0.2,0.2),Xmin=0.2,thetat=0.476,thetae=thetae,N=3)
+      newdata=list(eff=c(0,0,0),tox=c(0,0,0),X=c(0.2,0.2,0.2),Xmin=0.2,thetat=0.333,thetae=thetae,N=3)
       
       ############list to store MCMC posterior samples######
       h.gammat<-list()
       h.gammae<-list()
       h.rhot<-list()
       h.rhoe<-list()
-      h.tau<-list()
+      h.phi<-list()
       est.lpe<-list()
       est.lpt<-list()
-      est.pe = list()
-      est.pt = list()
-      est.mu<-list()
-      est.xi<-list()
+      est.pe<-list()
+      est.pt<-list()
       sim.int<-list()
       pstm.pt<-rep(0,length(doselevel))
       pstm.pe<-rep(0,length(doselevel))
@@ -111,7 +111,7 @@ gammae~dunif(Xmin,1.2)
         
         #######run jags to generate MCMC chain#########
         foo<-jags.model(textConnection(model),data=newdata,inits=init,quiet=T)
-        out <- coda.samples(model=foo,variable.names=c("gammat","gammae","rhot","rhoe","tau"), n.iter=2000)
+        out <- coda.samples(model=foo,variable.names=c("gammat","gammae","rhot","rhoe","phi"), n.iter=2000)
         ################################################
         
         ##########store posterior samples############
@@ -119,7 +119,7 @@ gammae~dunif(Xmin,1.2)
         h.gammae[[i]]<-out[[1]][,"gammae"][1001:2000]
         h.rhot[[i]]<-out[[1]][,"rhot"][1001:2000]
         h.rhoe[[i]]<-out[[1]][,"rhoe"][1001:2000]
-        h.tau[[i]]<-out[[1]][,"tau"][1001:2000]
+        h.phi[[i]]<-out[[1]][,"phi"][1001:2000]
         ##############################################
         
         #####improve feasibility bound###########
@@ -145,10 +145,8 @@ gammae~dunif(Xmin,1.2)
           ##########predict posterior efficacy and toxicity############
           est.lpe[[j]]<-(1/(h.gammae[[i]]- Xmin))*(h.gammae[[i]]*log(h.rhoe[[i]]/(1-h.rhoe[[i]]))- Xmin*log(thetae/(1-thetae))+(log(thetae/(1-thetae))-log(h.rhoe[[i]]/(1-h.rhoe[[i]])))*std.dose[j])
           est.lpt[[j]]<-(1/(h.gammat[[i]]- Xmin))*(h.gammat[[i]]*log(h.rhot[[i]]/(1-h.rhot[[i]]))- Xmin*log(thetat/(1-thetat))+(log(thetat/(1-thetat))-log(h.rhot[[i]]/(1-h.rhot[[i]])))*std.dose[j])
-          est.xi[[j]]<-mean(1/(1+exp(-est.lpt[[j]])))
-          est.mu[[j]]<-mean(1/(1+exp(-est.lpe[[j]])))
-          est.pt[[j]]<-est.xi[[j]]
-          est.pe[[j]]<-est.mu[[j]]
+          est.pt[[j]]<-1/(1+exp(-est.lpt[[j]]))
+          est.pe[[j]]<-1/(1+exp(-est.lpe[[j]]))
           pstm.pt[j]<-mean(est.pt[[j]])
           pstm.pe[j]<-mean(est.pe[[j]])
           ###############################################################
@@ -182,14 +180,14 @@ gammae~dunif(Xmin,1.2)
           idx<-which(std.dose==sim.ad[which.max(z)])
           dose.tried[idx]=1
           nextdose<-std.dose[idx] ######choose the best utility dose level######
-          
-          
           for (m in 1:3){
-            #####responses for next cohort#######
             set.seed(m^2+k+10*i+55*j)
-            S = rtnorm(n = 1, mean = xi[idx], sd = sqrt(xi[idx]*(1-xi[idx])/N), lower = 0, upper = 1)
-            eff = rtnorm(n = 1, mean = mu[idx] + tau*(S-xi[idx]), sd = sqrt(sqrt(std.dose[idx]^lambda)), lower = 0, upper = 1) 
-        
+            #####responses for next cohort#######
+            res[m]<-sample(c(1,2,3,4),size=1,replace=T,prob=c(p11[idx],p10[idx],p01[idx],p00[idx]))
+            if (res[m]==1) {tox=1;eff=1}
+            else if (res[m]==2) {tox=1;eff=0}
+            else if (res[m]==3) {tox=0;eff=1}
+            else if (res[m]==4) {tox=0;eff=0}
             ###################################
             
             recuittime<-rexp(1,arrival)
@@ -197,7 +195,7 @@ gammae~dunif(Xmin,1.2)
             if(needmore<0){needmore=0}       
             
             ########toxicity and efficacy for cumulated data#######
-            newdata$S=c(newdata$S,S)
+            newdata$tox=c(newdata$tox,tox)
             newdata$eff=c(newdata$eff,eff)
             newdata$X=c(newdata$X,nextdose)
             newdata$N=newdata$N+1
@@ -212,33 +210,34 @@ gammae~dunif(Xmin,1.2)
       if (length(sim.ad)==0)  {
         final[k]=NA
       }
-      pstm.du[k]<-mean(est.pe[[idx]]-w*est.pt[[idx]])
+      pstm.du[k]<-mean(est.pe[[idx]]-est.pt[[idx]])
       upe[k]<-sum(est.pe[[idx]]>thetae)/length(est.pe[[idx]])
     }
     ####manipulate data to write down final result####
     s.table<-all.table[all.table$patientId != c(37,38,39),]
-    dr.table<-table(final,useNA="always")/sim #percentage of dose recommendation
-    df.table<-table(s.table[,3])/nrow(s.table) #percentage of patients treated at each dose level
+    dr.table<-table(final,useNA="always")/sim
+    df.table<-table(s.table[,3])/nrow(s.table)
+    t.table<-table(s.table[,2])/nrow(s.table)
+    e.table<-table(s.table[,1])/nrow(s.table)  
     n.table<-all.table[all.table$size <=36,]
-    t.table<-nrow(subset(s.table, S >= thetat))/nrow(s.table)
-    e.table<-nrow(subset(s.table, eff >= thetae))/nrow(s.table)
     aver.samplesize<-nrow(s.table)/sim
-    u.table<-matrix(c(pstm.pe,std.dose),ncol=2)
+    u.table<-matrix(c(d.u,std.dose),ncol=2)
     colnames(u.table)<-c("utility","d")
     ut<-merge(s.table,u.table,by.x="X",by.y="d")
     eut<-sum(ut$utility)/nrow(ut)
-    r.rt<-cbind(t(round(real.table,4)),std.dose)
+    r.rt<-cbind(t(round(real.table,2)),std.dose)
     cm<-data.frame(r.rt)
     c1<-data.frame(df.table);colnames(c1)<-c("dose","Tp")
     c2<-data.frame(dr.table);colnames(c2)<-c("dose","Rp")
-    c3<-data.frame(t.table);colnames(c3)<-c("DLT")
-    c4<-data.frame(e.table);colnames(c4)<-c("Efficacy")
+    c3<-data.frame(t.table);colnames(c3)<-c("t","Dp")
+    c4<-data.frame(e.table);colnames(c4)<-c("e","Ep")
     expt<-mean(time)
     m1<-merge(cm,c1,by.x="std.dose",by.y="dose",all.x=T)
     m2<-merge(m1,c2,by.x="std.dose",by.y="dose",all.x=T)
-    m3<-cbind(m2,c3, c4, eut,expt,sname, design, aver.samplesize)
+    m3<-cbind(m2,c3[c3$t==1,2],c4[c4$e==1,2],eut,expt,sname,design, aver.samplesize)
     m3[,5:6]=m3[,5:6]*100
-    write.xlsx(m3,"EWOUC-NETS-s5-newW2.xlsx")
+    colnames(m3)[7:8]=c("DLT","Efficacy")
+    write.xlsx(m3,"EWOUC-old-s4-newW.xlsx")
     return(list(m3))
   }
   
@@ -250,6 +249,7 @@ gammae~dunif(Xmin,1.2)
   ewouc.s3<-emuOU(doselevel,std.dose[5],std.dose[3],12,1000,3,2,"Moderate",3,0.333,0,"EWOUC-comp",7)
   ewouc.s4<-emuOU(doselevel,std.dose[2],std.dose[4],12,1000,3,2,"Bad",3,0.333,0,"EWOUC-comp",7)
   ewouc.s5<-emuOU(doselevel,std.dose[2],std.dose[5],12,1000,3,2,"Extremely Bad",3,0.333,0,"EWOUC-comp",7)
+  
   
   
   

@@ -23,7 +23,7 @@ logit(mu[i])<-(1/(gammae - Xmin))*(gammae*logit(rhoe)- Xmin*logit(thetae)+(logit
 sigma[i] = sqrt(X[i])
 }
 
-tau~dunif(-10,10)
+tau~dunif(-1,1)
 rhot~dunif(0,0.333)
 rhoe~dunif(0,0.5)
 gammat~dunif(Xmin,1.2)
@@ -41,14 +41,14 @@ gammae~dunif(Xmin,1.2)
     thetae<-0.3  ######efficacy lower bound####
     
     #####model setting###
-    Xmin=0.2;Xmax=1;rhot=0.03;rhoe=0.08  #####initial value
+    Xmin=0.2;Xmax=1;rhot=0.01;rhoe=0.02  #####initial value
     b0t=1/(gammat-Xmin)*(gammat*logit(rhot)-Xmin*logit(thetat))
     b1t=1/(gammat-Xmin)*(logit(thetat)-logit(rhot))
     b0e=1/(gammae-Xmin)*(gammae*logit(rhoe)-Xmin*logit(thetae))
     b1e=1/(gammae-Xmin)*(logit(thetae)-logit(rhoe))
     xi = exp(b0t + b1t*std.dose)/(1+exp(b0t + b1t*std.dose))
     mu = exp(b0e + b1e*std.dose)/(1+exp(b0e + b1e*std.dose))
-    lambda = 2
+    lambda = 7
     sig2 = std.dose^lambda
     
     s1.pe = mu
@@ -139,12 +139,12 @@ gammae~dunif(Xmin,1.2)
         for (j in 1:length(std.dose)) {
           est.lpe[[j]]<-(1/(h.gammae[[i]]- Xmin))*(h.gammae[[i]]*log(h.rhoe[[i]]/(1-h.rhoe[[i]]))- Xmin*log(thetae/(1-thetae))+(log(thetae/(1-thetae))-log(h.rhoe[[i]]/(1-h.rhoe[[i]])))*std.dose[j])
           est.lpt[[j]]<-(1/(h.gammat[[i]]- Xmin))*(h.gammat[[i]]*log(h.rhot[[i]]/(1-h.rhot[[i]]))- Xmin*log(thetat/(1-thetat))+(log(thetat/(1-thetat))-log(h.rhot[[i]]/(1-h.rhot[[i]])))*std.dose[j])
-          est.xi[[j]]<-median(1/(1+exp(-est.lpt[[j]])))
-          est.mu[[j]]<-median(1/(1+exp(-est.lpe[[j]])))
+          est.xi[[j]]<-mean(1/(1+exp(-est.lpt[[j]])))
+          est.mu[[j]]<-mean(1/(1+exp(-est.lpe[[j]])))
           est.pt[[j]]<-est.xi[[j]]
           est.pe[[j]]<-est.mu[[j]]
-          pstm.pt[j]<-median(est.pt[[j]])
-          pstm.pe[j]<-median(est.pe[[j]])
+          pstm.pt[j]<-mean(est.pt[[j]])
+          pstm.pe[j]<-mean(est.pe[[j]])
           if(std.dose[j]>=adj.med&std.dose[j]<=adj.mtd){
             sim.ad<-c(std.dose[j],sim.ad)
             z<-c(mean(est.pe[[j]]-w*est.pt[[j]]),z) 
@@ -193,7 +193,7 @@ gammae~dunif(Xmin,1.2)
           nextdose<-std.dose[idx]
           for (m in 1:3){
             #####responses for next cohort#######
-            set.seed(m+k+10*i+55*j)
+            set.seed(m^2+k+10*i+55*j)
             S = rtnorm(n = 1, mean = xi[idx], sd = sqrt(xi[idx]*(1-xi[idx])/N), lower = 0, upper = 1)
             eff = rtnorm(n = 1, mean = mu[idx] + tau*(S-xi[idx]), sd = sqrt(sqrt(std.dose[idx])), lower = 0, upper = 1) 
             M=1
@@ -244,14 +244,14 @@ gammae~dunif(Xmin,1.2)
     m3<-cbind(m2,c3,c4,eut,sname,design,avgsample)
     m3[,5:6]=m3[,5:6]*100
 
-    write.xlsx(m3,"EWOUC-NW-s1(2).xlsx")
+    write.xlsx(m3,"EWOUC-NW-s3-new.xlsx")
     return(m3)
   }
   
-  lat.s1<-simLate(std.dose[t.idx[1]],std.dose[e.idx[1]],3,"EWOUC-NW2","Extremely Good")
-  lat.s2<-simLate(std.dose[t.idx[2]],std.dose[e.idx[2]],3,"EWOUC-NW2","Good")
+  lat.s1<-simLate(std.dose[t.idx[1]],std.dose[e.idx[1]],2,"EWOUC-NW2","Extremely Good")
+  lat.s2<-simLate(std.dose[t.idx[2]],std.dose[e.idx[2]],2,"EWOUC-NW2","Good")
   lat.s3<-simLate(std.dose[t.idx[3]],std.dose[e.idx[3]],2,"EWOUC-NW2","Moderate")
-  lat.s4<-simLate(std.dose[t.idx[4]],std.dose[e.idx[4]],3,"EWOUC-NW2","Bad")
-  lat.s5<-simLate(std.dose[t.idx[5]],std.dose[e.idx[5]],3,"EWOUC-NW2","Extremely Bad")
+  lat.s4<-simLate(std.dose[t.idx[4]],std.dose[e.idx[4]],2,"EWOUC-NW2","Bad")
+  lat.s5<-simLate(std.dose[t.idx[5]],std.dose[e.idx[5]],2,"EWOUC-NW2","Extremely Bad")
   
   
