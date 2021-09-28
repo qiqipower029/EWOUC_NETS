@@ -1,6 +1,6 @@
 ######EWOUC-NETS late on efficacy######
 require(rjags) ####package for posterior distribution########
-require(truncnorm)
+require(msm)
 library(openxlsx)
 ####jags model specification####
 model="model
@@ -179,8 +179,8 @@ gammae~dunif(Xmin,1.2)
           #####generate new data based on true distribution####
           for (m in 1:3){
             set.seed(m+k+10*i+55*j)
-            S = rtruncnorm(n = 1, mean = xi[idx], sd = sqrt(xi[idx]*(1-xi[idx])/N), a = 0, b = 1)
-            eff = rtruncnorm(n = 1, mean = mu[idx] + tau*(S-xi[idx]), sd = sqrt(sqrt(std.dose[idx])), a = 0, b = 1) 
+            S = rtnorm(n = 1, mean = xi[idx], sd = sqrt(xi[idx]*(1-xi[idx])/N), lower = 0, upper = 1)
+            eff = rtnorm(n = 1, mean = mu[idx] + tau*(S-xi[idx]), sd = sqrt(sqrt(std.dose[idx]^lambda)), lower = 0, upper = 1) 
             M = 1
             newdata$S=c(newdata$S,S)
             newdata$eff=c(newdata$eff,eff)
