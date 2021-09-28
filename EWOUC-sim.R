@@ -40,7 +40,7 @@ gammae~dunif(Xmin,1.2)
     upe<-rep(0,sim)    ####Utility###
     res<-c(0,0,0)     ####initial result####    
     ######model####
-    Xmin=0.2;Xmax=1;rhot=0.01;rhoe=0.02  #####initial value
+    Xmin=0.2;Xmax=1;rhot=0.03;rhoe=0.08  #####initial value
     b0t=1/(gammat-Xmin)*(gammat*logit(rhot)-Xmin*logit(thetat))
     b1t=1/(gammat-Xmin)*(logit(thetat)-logit(rhot))
     b0e=1/(gammae-Xmin)*(gammae*logit(rhoe)-Xmin*logit(thetae))
@@ -237,7 +237,7 @@ gammae~dunif(Xmin,1.2)
     m3<-cbind(m2,c3[c3$t==1,2],c4[c4$e==1,2],eut,expt,sname,design, aver.samplesize)
     m3[,5:6]=m3[,5:6]*100
     colnames(m3)[7:8]=c("DLT","Efficacy")
-    write.xlsx(m3,"EWOUC-old-s4-newW.xlsx")
+    write.xlsx(m3,"EWOUC-old-s3-newW2.xlsx")
     return(list(m3))
   }
   

@@ -53,7 +53,7 @@ gammae~dunif(Xmin,1.2)
     sig2 = std.dose^lambda
     s1.pe = mu
     s1.pt = xi
-    d.u<-s1.pe-s1.pt       ####true utility###
+    d.u<-s1.pe-w*s1.pt       ####true utility###
     real.table=rbind(s1.pt,s1.pe,d.u) ####scenario###
     
     d.table<-NULL
@@ -229,15 +229,15 @@ gammae~dunif(Xmin,1.2)
     m3<-cbind(m2,c3,c4,eut,sname,design,avgsample)
     m3[,5:6]=m3[,5:6]*100
     colnames(m3)[7:8]=c("DLT","Efficacy")
-    write.xlsx(m3,"EWOUC-NETS-DA-S2.xlsx")
+    write.xlsx(m3,"EWOUC-NETS-DA-S3-new.xlsx")
     ##################
     return(m3)
   }
   
   
   ####simulate five scenarios####
-  lat.s1<-simLate(std.dose[t.idx[1]],std.dose[e.idx[1]],3,"EWOUC-DA","Extremely Good")
-  lat.s2<-simLate(std.dose[t.idx[2]],std.dose[e.idx[2]],3,"EWOUC-DA","Good")
+  lat.s1<-simLate(std.dose[t.idx[1]],std.dose[e.idx[1]],2,"EWOUC-DA","Extremely Good")
+  lat.s2<-simLate(std.dose[t.idx[2]],std.dose[e.idx[2]],2,"EWOUC-DA","Good")
   lat.s3<-simLate(std.dose[t.idx[3]],std.dose[e.idx[3]],2,"EWOUC-DA","Moderate")
-  lat.s4<-simLate(std.dose[t.idx[4]],std.dose[e.idx[4]],3,"EWOUC-DA","Bad")
-  lat.s5<-simLate(std.dose[t.idx[5]],std.dose[e.idx[5]],3,"EWOUC-DA","Extremely Bad")
+  lat.s4<-simLate(std.dose[t.idx[4]],std.dose[e.idx[4]],2,"EWOUC-DA","Bad")
+  lat.s5<-simLate(std.dose[t.idx[5]],std.dose[e.idx[5]],2,"EWOUC-DA","Extremely Bad")
